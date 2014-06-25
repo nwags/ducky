@@ -12,9 +12,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.red_folder.phonegap.plugin.backgroundservice.BackgroundServiceApi;
-import com.red_folder.phonegap.plugin.backgroundservice.BackgroundServiceListener;
-
 import android.app.IntentService;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
