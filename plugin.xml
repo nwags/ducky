@@ -9,16 +9,15 @@
     <description>Opentrons Bluetooth Alpha Plugin</description>
     <license>Apache 2.0</license>
     <keywords>opentrons</keywords>
-    <repo>https://github.com/nwags/froggy.git</repo>
-    <issue>https://github.com/nwags/froggy/issues</issue>
+    <repo>https://github.com/nwags/ducky.git</repo>
+    <issue>https://github.com/nwags/ducky/issues</issue>
 
     <engines>
         <engine name="cordova" version=">=3.0.0" />
     </engines>
 
     <!-- Load in the core background service -->
-	<dependency id="com.red_folder.phonegap.plugin.backgroundservice" url="https://github.com/Red-Folder/bgs-core.git"/>
-
+	
 
     <js-module src="www/opentrons.js" name="opentrons">
         <clobbers target="window.opentrons" />
