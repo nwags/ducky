@@ -7,6 +7,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+
+
+
+
 // kludgy imports to support 2.9 and 3.0 due to package changes
 import org.apache.cordova.*;
 import org.apache.cordova.api.*;
@@ -19,25 +23,28 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.opentrons.otbtalpha.cordova.OTBTLogicAlpha.ExecuteResult;
+import com.opentrons.otbtalpha.cordova.OTBTLogicAlpha.ExecuteStatus;
+
 import java.util.Set;
 
 /**
  * Cordova Plugin for Serial Communication with Opentrons over Bluetooth (based off of Don Coleman's
  * BluetoothSerial plugin)
  */
-public class OTBTAlpha extends CordovaPlugin {
 
-	//nwags variable
-	public static double posx=0.0;
-	public static double posy=0.0;
-	public static double posz=0.0;
-	public static double posa=0.0;
-	
-	public static double xmax=400.0;
-	public static double ymax=200.0;
-	public static double zmax=200.0;
-	public static double amax=24.0;
-	public static boolean power=true;
+public class OTBTAlpha extends CordovaPlugin implements IUpdateListener {
+
+	/*
+	 ************************************************************************************************
+	 * Static values 
+	 ************************************************************************************************
+	 */
+	// Debugging
+    private static final String TAG = OTBTAlpha.class.getSimpleName();
+    private static final boolean D = true;
+
+    
 	
     // actions
     private static final String LIST = "list";
@@ -60,169 +67,195 @@ public class OTBTAlpha extends CordovaPlugin {
     private static final String GET_DIMENSIONS = "getDimensions";
     private static final String HOME = "home";
     
-    // callbacks
-    private CallbackContext connectCallback;
-    private CallbackContext dataAvailableCallback;
     
-    //nwags-callbacks
-    //private CallbackContext jogDataCallback;
+    /*
+	 ************************************************************************************************
+	 * Fields 
+	 ************************************************************************************************
+	 */
+    private OTBTLogicAlpha mLogic = null;
     
     
-    private BluetoothAdapter bluetoothAdapter;
-    private OTBTWorkerAlpha otbtworker;
 
-    // Debugging
-    private static final String TAG = OTBTAlpha.class.getSimpleName();
-    private static final boolean D = true;
-
-    // Message types sent from the BluetoothSerialService Handler
-    public static final int MESSAGE_STATE_CHANGE = 1;
-    public static final int MESSAGE_READ = 2;
-    public static final int MESSAGE_WRITE = 3;
-    public static final int MESSAGE_DEVICE_NAME = 4;
-    public static final int MESSAGE_TOAST = 5;
-
-    // Key names received from the BluetoothChatService Handler
-    public static final String DEVICE_NAME = "device_name";
-    public static final String TOAST = "toast";
-
-    StringBuffer buffer = new StringBuffer();
-    private String delimiter;
-
+    /*
+	 ************************************************************************************************
+	 * Overriden Methods 
+	 ************************************************************************************************
+	 */
     @Override
-    public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
-
+    public boolean execute(final String action, final CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
+    	
         LOG.d(TAG, "action = " + action);
 
-        if (bluetoothAdapter == null) {
-            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        }
-
-        if (otbtworker == null) {
-            otbtworker = new OTBTWorkerAlpha(mHandler);
-        }
-
-        boolean validAction = true;
+        boolean result = false;
         
-        if (action.equals(LIST)) {
-
-            listBondedDevices(callbackContext);
-
-        } else if (action.equals(CONNECT)) {
-
-            boolean secure = true;
-            connect(args, secure, callbackContext);
-
-        /*} else if (action.equals(CONNECT_INSECURE)) {
-
-            // see Android docs about Insecure RFCOMM http://goo.gl/1mFjZY
-            boolean secure = false;
-            connect(args, false, callbackContext);
-*/
-        } else if (action.equals(DISCONNECT)) {
-
-            connectCallback = null;
-            otbtworker.stop();
-            callbackContext.success();
-
-        /*} else if (action.equals(WRITE)) {
-
-            String data = args.getString(0);
-            bluetoothSerialService.write(data.getBytes());
-            callbackContext.success();
-*/
-        } else if (action.equals(AVAILABLE)) {
-
-            callbackContext.success(available());
-
-        /*} else if (action.equals(READ)) {
-
-            callbackContext.success(read());
-
-        } else if (action.equals(READ_UNTIL)) {
-
-            String interesting = args.getString(0);
-            callbackContext.success(readUntil(interesting));
-*/
-        } else if (action.equals(SUBSCRIBE)) {
-
-            delimiter = args.getString(0);
-            dataAvailableCallback = callbackContext;
-
-            PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-            result.setKeepCallback(true);
-            callbackContext.sendPluginResult(result);
-
-        } else if (action.equals(UNSUBSCRIBE)) {
-
-            delimiter = null;
-            dataAvailableCallback = null;
-
-            callbackContext.success();
-
-        } else if (action.equals(IS_ENABLED)) {
-
-            if (bluetoothAdapter.isEnabled()) {
-                callbackContext.success();                
-            } else {
-                callbackContext.error("Bluetooth is disabled.");
-            }            
-
-        } else if (action.equals(IS_CONNECTED)) {
-            
-            if (otbtworker.getState() == OTBTWorkerAlpha.STATE_CONNECTED) {
-                callbackContext.success();                
-            } else {
-                callbackContext.error("Not connected.");
-            }
-
-        } else if (action.equals(CLEAR)) {
-
-            buffer.setLength(0);
-            callbackContext.success();
-
-        } else if (action.equals(JOG)) { //nwags-action
+        if(this.mLogic == null)
+        	this.mLogic = new OTBTLogicAlpha(this.cordova.getActivity());
+        
+        try{
+        	if(this.mLogic.isActionValid(action)){
+        		final IUpdateListener listener = this;
+        		final Object[] listenerExtras = new Object[] { callbackContext };
+        		
+        		cordova.getThreadPool().execute(new Runnable(){
+        			@Override
+        			public void run() {
+        				ExecuteResult logicResult = mLogic.execute(action, args, listener, listenerExtras);
+        				
+        				Log.d(TAG, "logicResult = " + logicResult.toString());
+        				
+        				PluginResult pluginResult = transformResult(logicResult);
+        				
+        				Log.d(TAG, "pluginResult = " + pluginResult.toString());
+        				Log.d(TAG, "pluginResult.getMessage() = " + pluginResult.getMessage());
+        				if(pluginResult.getKeepCallback())
+        					Log.d(TAG, "Keep Callback");
+        				else
+        					Log.d(TAG, "Don't keep Callback");
+        				
+        				callbackContext.sendPluginResult(pluginResult);
+        			}
+        		});
+        		
+        		result = true;
+        	} else {
+        		result = false;
+        	}
         	
-        	jog(args, callbackContext);
-        /*	
-        } else if (action.equals(JOG_SUBSCRIBE)) { //nwags-action
-        	jogDataCallback = callbackContext;
-        	
-        	PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-            result.setKeepCallback(true);
-            callbackContext.sendPluginResult(result);
-        } else if (action.equals(JOG_UNSUBSCRIBE)) { //nwags-action
-        	jogDataCallback = null;
-            callbackContext.success();*/
-        } else if (action.equals(SET_DIMENSIONS)) {
-        	
-        	setDimensions(args, callbackContext);
-        	
-        } else if (action.equals(GET_DIMENSIONS)) {
-        	
-        	getDimensions(callbackContext);
-        	
-        } else if (action.equals(HOME)) {
-        	
-        	home(callbackContext);
-        	
-        }else {
-
-            validAction = false;
-
+        } catch (Exception ex) {
+        	Log.d(TAG, "Exception - " + ex.getMessage());
         }
-
-        return validAction;
+        
+        return result;
+        
+    // ***************************************************************************    
+        
     }
-
+    
+    /*
     @Override
     public void onDestroy() {
         super.onDestroy();
+        
+        if(this.mLogic != null) {
+        	this.mLogic.onDestroy();
+        	this.mLogic = null;
+        }
+        
+        
+        // **************************************
         if (otbtworker != null) {
             otbtworker.stop();
         }
     }
+	*/
+    
+    /*
+	 ************************************************************************************************
+	 * Public Methods 
+	 ************************************************************************************************
+	 */
+    
+	public void handleUpdate(ExecuteResult logicResult, Object[] listenerExtras) {
+		Log.d(TAG, "Starting handleUpdate");
+		sendUpdateToListener(logicResult, listenerExtras);
+		Log.d(TAG, "Finished handleUpdate");
+	}
+	
+	public void closeListener(ExecuteResult logicResult, Object[] listenerExtras) {
+		Log.d(TAG, "Starting closeListener");
+		sendUpdateToListener(logicResult, listenerExtras);
+		Log.d(TAG, "Finished closeListener");
+	}
+	
+	/*
+	 ************************************************************************************************
+	 * Private Methods 
+	 ************************************************************************************************
+	 */
+	private void sendUpdateToListener(ExecuteResult logicResult, Object[] listenerExtras) {
+		try {
+			if (listenerExtras != null && listenerExtras.length > 0) {
+				Log.d(TAG, "Sending update");
+				CallbackContext callback = (CallbackContext)listenerExtras[0];
+		
+				callback.sendPluginResult(transformResult(logicResult));
+				Log.d(TAG, "Sent update");
+			}
+		} catch (Exception ex) {
+			Log.d(TAG, "Sending update failed", ex);
+		}
+	}
+	
+	private PluginResult transformResult(ExecuteResult logicResult) {
+		PluginResult pluginResult = null;
+		
+		Log.d(TAG, "Start of transformResult");
+		if (logicResult.getStatus() == ExecuteStatus.OK) {
+			Log.d(TAG, "Status is OK");
+			
+			if (logicResult.getData() == null) {
+				Log.d(TAG, "We dont have data");
+				pluginResult = new PluginResult(PluginResult.Status.OK);
+			} else {
+				Log.d(TAG, "We have data");
+				pluginResult = new PluginResult(PluginResult.Status.OK, logicResult.getData());
+			}
+		}
 
+		if (logicResult.getStatus() == ExecuteStatus.ERROR) {
+			Log.d(TAG, "Status is ERROR");
+			
+			if (logicResult.getData() == null) {
+				Log.d(TAG, "We dont have data");
+				pluginResult = new PluginResult(PluginResult.Status.ERROR, "Unknown error");
+			} else {
+				Log.d(TAG, "We have data");
+				pluginResult = new PluginResult(PluginResult.Status.ERROR, logicResult.getData());
+			}
+		}
+		
+		if (logicResult.getStatus() == ExecuteStatus.INVALID_ACTION) {
+			Log.d(TAG, "Status is INVALID_ACTION");
+			
+			if (logicResult.getData() == null) {
+				Log.d(TAG, "We have data");
+				pluginResult = new PluginResult(PluginResult.Status.INVALID_ACTION, "Unknown error");
+			} else {
+				Log.d(TAG, "We dont have data");
+				pluginResult = new PluginResult(PluginResult.Status.INVALID_ACTION, logicResult.getData());
+			}
+		}
+		
+		if (!logicResult.isFinished()) {
+			Log.d(TAG, "Keep Callback set to true");
+			pluginResult.setKeepCallback(true);
+		}
+		
+		Log.d(TAG, "End of transformResult");
+		return pluginResult;
+	}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    // ********************************************************************
+    
+    
+    
+    /*
     private void listBondedDevices(CallbackContext callbackContext) throws JSONException {
         JSONArray deviceList = new JSONArray();
         Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
@@ -275,7 +308,7 @@ public class OTBTAlpha extends CordovaPlugin {
                     /*
                     if(jogDataCallback != null){ //nwags
                     	sendJogDataToSubscriber();
-                    }*/
+                    }
                     break;
                  case MESSAGE_STATE_CHANGE:
 
@@ -326,7 +359,7 @@ public class OTBTAlpha extends CordovaPlugin {
             connectCallback.sendPluginResult(result);
         }
     }
-
+/*
     private void sendDataToSubscriber() {
     	LOG.d(TAG, "sendDataToSubscriber called");
     	String data = readUntil("\n");
@@ -353,7 +386,8 @@ public class OTBTAlpha extends CordovaPlugin {
     		
             sendDataToSubscriber();
     	}
-    	/*
+    	
+    	
     	
         String data = readUntil(delimiter);
         if (data != null && data.length() > 0) {
@@ -362,7 +396,7 @@ public class OTBTAlpha extends CordovaPlugin {
             dataAvailableCallback.sendPluginResult(result);
 
             sendDataToSubscriber();
-        }*/
+        }
     }
 
     private int available() {
@@ -387,7 +421,7 @@ public class OTBTAlpha extends CordovaPlugin {
     }
 
     //nwags private methods
-    /*
+    
     private void sendJogDataToSubscriber() {
     	LOG.d(TAG, "sendJogDataToSubscriber called");
     	String data = readUntil("\n");
@@ -415,7 +449,7 @@ public class OTBTAlpha extends CordovaPlugin {
             sendJogDataToSubscriber();
     	}
     }
-    */
+    
     private String processBody(JSONObject json) throws JSONException {
     	LOG.d(TAG, "processBody called");
     	String result = "";
@@ -581,4 +615,5 @@ public class OTBTAlpha extends CordovaPlugin {
     	
     	callbackContext.success();
     }
+    */
 }

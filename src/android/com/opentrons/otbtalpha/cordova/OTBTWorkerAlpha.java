@@ -74,7 +74,7 @@ public class OTBTWorkerAlpha {
         mState = state;
 
         // Give the new state to the Handler so the UI Activity can update
-        mHandler.obtainMessage(OTBTAlpha.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
+        mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
     }
 
     /**
@@ -162,9 +162,9 @@ public class OTBTWorkerAlpha {
         mConnectedThread.start();
 
         // Send the name of the connected device back to the UI Activity
-        Message msg = mHandler.obtainMessage(OTBTAlpha.MESSAGE_DEVICE_NAME);
+        Message msg = mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_DEVICE_NAME);
         Bundle bundle = new Bundle();
-        bundle.putString(OTBTAlpha.DEVICE_NAME, device.getName());
+        bundle.putString(OTBTLogicAlpha.DEVICE_NAME, device.getName());
         msg.setData(bundle);
         mHandler.sendMessage(msg);
 
@@ -221,9 +221,9 @@ public class OTBTWorkerAlpha {
      */
     private void connectionFailed() {
         // Send a failure message back to the Activity
-        Message msg = mHandler.obtainMessage(OTBTAlpha.MESSAGE_TOAST);
+        Message msg = mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
-        bundle.putString(OTBTAlpha.TOAST, "Unable to connect to device");
+        bundle.putString(OTBTLogicAlpha.TOAST, "Unable to connect to device");
         msg.setData(bundle);
         mHandler.sendMessage(msg);
 
@@ -236,9 +236,9 @@ public class OTBTWorkerAlpha {
      */
     private void connectionLost() {
         // Send a failure message back to the Activity
-        Message msg = mHandler.obtainMessage(OTBTAlpha.MESSAGE_TOAST);
+        Message msg = mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
-        bundle.putString(OTBTAlpha.TOAST, "Device connection was lost");
+        bundle.putString(OTBTLogicAlpha.TOAST, "Device connection was lost");
         msg.setData(bundle);
         mHandler.sendMessage(msg);
 
@@ -440,7 +440,7 @@ public class OTBTWorkerAlpha {
                     String data = new String(buffer, 0, bytes);
 
                     // Send the new data String to the UI Activity
-                    mHandler.obtainMessage(OTBTAlpha.MESSAGE_READ, data).sendToTarget();
+                    mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_READ, data).sendToTarget();
 
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
@@ -461,7 +461,7 @@ public class OTBTWorkerAlpha {
                 mmOutStream.write(buffer);
 
                 // Share the sent message back to the UI Activity
-                mHandler.obtainMessage(OTBTAlpha.MESSAGE_WRITE, -1, -1, buffer).sendToTarget();
+                mHandler.obtainMessage(OTBTLogicAlpha.MESSAGE_WRITE, -1, -1, buffer).sendToTarget();
 
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);

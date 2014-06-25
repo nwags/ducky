@@ -38,6 +38,15 @@
             target-dir="src/com/opentrons/otbtalpha/cordova"/>
         <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTServiceAlpha.java"
             target-dir="src/com/opentrons/otbtalpha/cordova"/>
+        <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTLogicAlpha.java"
+            target-dir="src/com/opentrons/otbtalpha/cordova"/>
+        <source-file src="src/android/com/opentrons/otbtalpha/cordova/IUpdateListener.java"
+            target-dir="src/com/opentrons/otbtalpha/cordova"/>
+        <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTApiAlpha.aidl"
+            target-dir="src/com/opentrons/otbtalpha/cordova"/>
+        <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTListenerAlpha.aidl"
+            target-dir="src/com/opentrons/otbtalpha/cordova"/>
+            
         
 
         <!-- kludge for 2.9 -->
