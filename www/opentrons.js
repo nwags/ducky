@@ -69,27 +69,27 @@ module.exports = {
     
     //added for simple jog commands
     jog: function (jogcommand, success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "jog", [jogcommand]);
-	},
+	cordova.exec(success, failure, "OTBTAlpha", "jog", [jogcommand]);
+    },
 	
-	setDimensions: function (dimensions, success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "setdimensions", [dimensions]);
-	},
+    setDimensions: function (dimensions, success, failure) {
+	cordova.exec(success, failure, "OTBTAlpha", "setdimensions", [dimensions]);
+    },
 	
-	getDimensions: function (success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "getdimensions", []);
-	},
+    getDimensions: function (success, failure) {
+	cordova.exec(success, failure, "OTBTAlpha", "getdimensions", []);
+    },
 	
-	home: function (success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "home", []);
-	}
+    home: function (success, failure) {
+	cordova.exec(success, failure, "OTBTAlpha", "home", []);
+    },
 
-	stop: function (success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "stop", []);
-	}
+    stop: function (success, failure) {
+	cordova.exec(success, failure, "OTBTAlpha", "stop", []);
+    },
 
-	reset: function (success, failure) {
-		cordova.exec(success, failure, "OTBTAlpha", "reset", []);
-	}
+    reset: function (success, failure) {
+	cordova.exec(success, failure, "OTBTAlpha", "reset", []);
+    }
     
 };
