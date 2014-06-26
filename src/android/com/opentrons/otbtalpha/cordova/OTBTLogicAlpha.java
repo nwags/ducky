@@ -535,21 +535,26 @@ public class OTBTLogicAlpha implements IUpdateListener{
     	}
     	if (sr.has("posa")){
 			double t_posa = sr.getDouble("posa");
+			Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
 			posa = t_posa*Math.PI*2.0*rosa/360.0;
+			Log.d(TAG, "posa = "+String.valueOf(posa));
 			if(abc==0){
 				b_diff+=(posa-b_diff);
 				c_diff+=(posa-c_diff);
-				jResult.put("a", posa+a_diff);
+				jResult.put("a", posa-a_diff);
 			}else if(abc==1){
 				a_diff+=(posa-a_diff);
 				c_diff+=(posa-c_diff);
-				jResult.put("b", posa+b_diff);
+				jResult.put("b", posa-b_diff);
 			}else if(abc==2){
 				a_diff+=(posa-a_diff);
 				b_diff+=(posa-b_diff);
-				jResult.put("c", posa+c_diff);
+				jResult.put("c", posa-c_diff);
 			}
 			jResult.put("a", posa);
+			Log.d(TAG, "a_diff="+String.valueOf(a_diff));
+			Log.d(TAG, "b_diff="+String.valueOf(b_diff));
+			Log.d(TAG, "c_diff="+String.valueOf(c_diff));
     	}
     	if (sr.has("stat")){
 			switch (sr.getInt("stat")){
