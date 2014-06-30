@@ -45,7 +45,7 @@ public class OTBTAlpha extends CordovaPlugin implements IUpdateListener {
     private static final boolean D = true;
 
     
-	
+	/*
     // actions
     private static final String LIST = "list";
     private static final String CONNECT = "connect";
@@ -66,7 +66,7 @@ public class OTBTAlpha extends CordovaPlugin implements IUpdateListener {
     private static final String SET_DIMENSIONS = "setDimensions";
     private static final String GET_DIMENSIONS = "getDimensions";
     private static final String HOME = "home";
-    
+    */
     
     /*
 	 ************************************************************************************************

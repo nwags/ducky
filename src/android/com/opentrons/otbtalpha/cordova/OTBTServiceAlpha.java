@@ -1,27 +1,22 @@
 package com.opentrons.otbtalpha.cordova;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.cordova.PluginResult;
+import org.apache.cordova.LOG;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.app.IntentService;
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 
@@ -45,12 +40,13 @@ public class OTBTServiceAlpha extends Service{
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
 	
-	
-	private BluetoothAdapter bluetoothAdapter;
-    private OTBTWorkerAlpha otbtworker;
+    
+    public static String args;
+    public static JSONArray job;
+    public static JSONArray ingredients;
+    
 	
     StringBuffer buffer = new StringBuffer();
-    
     
     
     private Boolean mServiceInitialised = false;
@@ -59,15 +55,6 @@ public class OTBTServiceAlpha extends Service{
 	private JSONObject mLatestResult = null;
 	
 	private List<OTBTListenerAlpha> mListeners = new ArrayList<OTBTListenerAlpha>();
-	
-	private static String job_configs;
-	private static String ingredients;
-	
-	
-	
-	
-	
-	
 	
 	
 	
@@ -116,6 +103,8 @@ public class OTBTServiceAlpha extends Service{
 		// Done this to ensure that my initialisation code is called.
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
+		args = intent.getStringExtra("args");
+		(new Thread(new BoomThread(job, ingredients))).start();
 	}
 	
 	@Override  
@@ -134,18 +123,18 @@ public class OTBTServiceAlpha extends Service{
 	 */
 	private JSONArray getConfig() throws JSONException{
 		JSONArray json = new JSONArray();
-		if(job_configs!=null&& !job_configs.equals(""))
-			json.put(0,new JSONArray(job_configs));
+		if(job!=null)
+			json.put(0, job);
 		
-		if(ingredients!=null&& !ingredients.equals(""))
-			json.put(1,new JSONArray(ingredients));
+		if(ingredients!=null)
+			json.put(1, ingredients);
 		
 		return json;
 	}
 	
 	private void setConfig(JSONArray array) throws JSONException {
-		job_configs = array.getJSONArray(0).toString();
-		ingredients = array.getJSONArray(1).toString();
+		job = array.getJSONArray(0);
+		ingredients = array.getJSONArray(1);
 	}
 	
 	
@@ -213,7 +202,6 @@ public class OTBTServiceAlpha extends Service{
 				else 
 					return array.toString();
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return "";
@@ -273,57 +261,8 @@ public class OTBTServiceAlpha extends Service{
 
 	}
 	
-	
-	private final Handler mHandler = new Handler() {
-
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MESSAGE_READ:
-                   buffer.append((String)msg.obj);
-                   
-                   //if (dataAvailableCallback != null) {
-                   //    sendDataToSubscriber();
-                   //}
-                   // TODO: NOTIFY JOB RUNNING THREAD
-                   /*
-                   if(jogDataCallback != null){ //nwags
-                   	sendJogDataToSubscriber();
-                   }*/
-                   break;
-                case MESSAGE_STATE_CHANGE:
-
-                   if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
-                   switch (msg.arg1) {
-                       case OTBTWorkerAlpha.STATE_CONNECTED:
-                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTED");
-                           notifyConnectionSuccess();
-                           break;
-                       case OTBTWorkerAlpha.STATE_CONNECTING:
-                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTING");
-                           break;
-                       case OTBTWorkerAlpha.STATE_LISTEN:
-                           Log.i(TAG, "BluetoothSerialService.STATE_LISTEN");
-                           break;
-                       case OTBTWorkerAlpha.STATE_NONE:
-                           Log.i(TAG, "BluetoothSerialService.STATE_NONE");
-                           break;
-                   }
-                   break;
-               case MESSAGE_WRITE:
-                   //  byte[] writeBuf = (byte[]) msg.obj;
-                   //  String writeMessage = new String(writeBuf);
-                   //  Log.i(TAG, "Wrote: " + writeMessage);
-                   break;
-               case MESSAGE_DEVICE_NAME:
-                   Log.i(TAG, msg.getData().getString(DEVICE_NAME));
-                   break;
-               case MESSAGE_TOAST:
-                   String message = msg.getData().getString(TOAST);
-                   notifyConnectionLost(message);
-                   break;
-            }
-        }
-   };
+	/*
+	*/
    
    private void notifyConnectionLost(String error){
 	   Log.i(TAG, "notifying to all listeners of msg");
@@ -366,11 +305,443 @@ public class OTBTServiceAlpha extends Service{
    
    
    private void runOnce(){
-	   // TODO: DO SOME BOOM-ING HERE, ie start thread to handle job
-	   
-	   
 	   
    }
+   
+   
+   private class BoomThread implements Runnable {
+	   
+	   private JSONArray mJob;
+	   private JSONArray mIngredients;
+	   private OTBTWorkerAlpha whack;
+	   private String mMessage = "";
+	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
+	   private HashMap<String, Location> hIngredients;
+	   private int pipette;
+	   private int ji = 0;
+	   private int idx = 0;
+	   private double adiff = 0.0;
+	   private double bdiff = 0.0;
+	   private double bopen = 0.0;
+	   private double bclose = 0.0;
+	   private double ablow = 0.0;
+	   
+	   private boolean proceed = true;
+	   private boolean running = true;
+	   
+	   private final Handler mHandler = new Handler() {
+		   
+	        public void handleMessage(Message msg) {
+	            switch (msg.what) {
+	                case MESSAGE_READ:
+	                   buffer.append((String)msg.obj);
+	                   
+	                   boomerang();
+	                   //if (dataAvailableCallback != null) {
+	                   //    sendDataToSubscriber();
+	                   //}
+	                   // TODO: NOTIFY JOB RUNNING THREAD
+	                   /*
+	                   if(jogDataCallback != null){ //nwags
+	                   	sendJogDataToSubscriber();
+	                   }*/
+	                   break;
+	                case MESSAGE_STATE_CHANGE:
+
+	                   if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
+	                   switch (msg.arg1) {
+	                       case OTBTWorkerAlpha.STATE_CONNECTED:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTED");
+	                           notifyConnectionSuccess();
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_CONNECTING:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTING");
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_LISTEN:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_LISTEN");
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_NONE:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_NONE");
+	                           break;
+	                   }
+	                   break;
+	               case MESSAGE_WRITE:
+	                   //  byte[] writeBuf = (byte[]) msg.obj;
+	                   //  String writeMessage = new String(writeBuf);
+	                   //  Log.i(TAG, "Wrote: " + writeMessage);
+	                   break;
+	               case MESSAGE_DEVICE_NAME:
+	                   Log.i(TAG, msg.getData().getString(DEVICE_NAME));
+	                   break;
+	               case MESSAGE_TOAST:
+	                   String message = msg.getData().getString(TOAST);
+	                   notifyConnectionLost(message);
+	                   break;
+	            }
+	        }
+	   };
+	   
+	   
+	   
+	   public BoomThread(JSONArray job, JSONArray ingredients) {
+		   mJob = job;
+		   mIngredients = ingredients;
+		   whack = new OTBTWorkerAlpha(mHandler);
+		   
+		   try{
+			   for(int i=0; i<mIngredients.length(); i++){
+				   Location loco = new Location();
+				   JSONObject jay = mIngredients.getJSONObject(i);
+				   loco.ingredient = jay.getString("name");
+				   loco.x = jay.getDouble("x");
+				   loco.y = jay.getDouble("y");
+				   loco.z = jay.getDouble("z");
+				   loco.pipette = jay.getInt("pipette");
+				   hIngredients.put(loco.ingredient, loco);
+			   }
+		   }catch(Exception ex){
+			   
+		   }
+	   }
+	   
+	   @Override
+	   public void run() {
+		   // TODO Auto-generated method stub
+		   
+		   
+		   while(running){ /* NOOP */ }
+	   }
+	   
+	   private void boomerang() {
+		   synchronized(this){
+			   Log.d(TAG, "boomerang called");
+			   String data = readUntil("\n");
+			   String jsonStr = "";
+			   if(data != null && data.length() > 0){
+		    		try {
+		    			Log.d(TAG, "data read = "+data);
+		    			JSONObject json = new JSONObject(data);
+		    			if (json.has("r")) {
+		    				processBody(json.getJSONObject("r"));
+		    			}else if (json.has("sr")) {
+		    				processStatusReport(json.getJSONObject("sr"));
+		    			}
+		    			//PluginResult result = new PluginResult(PluginResult.Status.OK, jsonStr);
+		                //result.setKeepCallback(true);
+		                //dataAvailableCallback.sendPluginResult(result);
+		    			if(mMessage!=null&&!mMessage.equals("")){
+		    				// TODO: SEND MESSAGE(JSON) BACK TO UI
+		    			}
+		    		} catch(Exception e){
+		    			if(e.getMessage()!=null)
+		    				Log.e(TAG, e.getMessage());
+		    			
+		    		}
+		    		
+		    		
+		            boomerang();
+	            }
+		   }
+	   }
+	   
+	   private String readUntil(String c) {
+		   String data = "";
+		   int index = buffer.indexOf(c, 0);
+		   if (index > -1) {
+			   data = buffer.substring(0, index + c.length());
+			   buffer.delete(0, index + c.length());
+		   }
+		   return data;
+	   }
+	   
+	   private String processBody(JSONObject json) throws JSONException {
+		   Log.d(TAG, "processBody called");
+		   String result = "";
+		   if(json.has("sr"))
+			   result = processStatusReport(json.getJSONObject("sr"));
+		   return result;
+	   }
+	    
+	   
+	   private String processStatusReport(JSONObject sr) throws JSONException{
+		   Log.d(TAG, "processStatusReport called");
+		   String result = "";
+		   
+		   if (sr.has("stat")){
+			   if(sr.getInt("stat")==3){
+				   if(whackattack.size()>0){
+					   try {
+						   String round = whackattack.take();
+						   whack.write(round.getBytes());
+					   } catch (InterruptedException e) {
+						   // TODO Auto-generated catch block
+						   e.printStackTrace();
+					   }
+					   
+				   }else{
+					   if(!commandSetup(mJob.getJSONObject(ji++)));
+					   		endSequence();
+					   
+				   }
+				   
+			   }
+		   }
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   
+		   /*
+		   JSONObject jResult = new JSONObject();
+		   if (sr.has("posx")){
+			   posx = sr.getDouble("posx");
+			   jResult.put("x", posx);
+		   }
+		   if (sr.has("posy")){
+			   posy = sr.getDouble("posy");
+			   jResult.put("y", posy);
+		   }
+		   if (sr.has("posz")){
+			   posz = sr.getDouble("posz");
+			   jResult.put("z", posz);
+		   }
+		   if (sr.has("posa")){
+			   double t_posa = sr.getDouble("posa");
+			   Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
+			   posa = t_posa*Math.PI*2.0*rosa/360.0;
+			   Log.d(TAG, "posa = "+String.valueOf(posa));
+			   if(abc==0){
+				   jResult.put("a", posa-a_diff);
+			   }else if(abc==1){
+				   jResult.put("b", posa-b_diff);
+			   }else if(abc==2){
+				   jResult.put("c", posa-c_diff);
+			   }
+			   jResult.put("a", posa);
+			   Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
+			   Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
+			   Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
+		   }
+		   if (sr.has("stat")){
+			   switch (sr.getInt("stat")){
+			   case 0:
+				   jResult.put("listening", 0);
+				   break;
+			   case 1:
+				   jResult.put("listening", 1);
+				   break;
+			   case 2:
+				   jResult.put("listening", 0);
+				   break;
+			   case 3:
+				   jResult.put("listening", 1);
+				   break;
+			   case 4:
+				   jResult.put("listening", 0);
+				   break;
+			   case 5:
+				   jResult.put("listening", 0);
+				   break;
+			   case 6:
+				   jResult.put("listening", 0);
+				   break;
+			   case 7:
+				   jResult.put("listening", 0);
+				   break;
+			   case 8:
+				   jResult.put("listening", 0);
+				   break;
+			   case 9:
+				   jResult.put("listening", 0);
+				   break;
+			   }
+		   }
+		   result = jResult.toString();
+		   LOG.d(TAG, "result: "+result);
+		   
+		   */
+		   
+		   
+		   
+		   return result;
+	   }
+	   
+	   public boolean commandSetup(JSONObject json){
+		   double time = 0.0;
+		   double aspirate = 0.0;
+		   int grip = 0;
+		   boolean blowout = false;
+		   String ingredient = "";
+		   
+		   
+		   try{
+			   ingredient = json.getString("ingredient");
+		   }catch(Exception iex){
+			   return false;
+		   }
+		   
+		   try{
+			   time = json.getJSONObject("trigger").getDouble("value");
+		   }catch(Exception timex){
+		   }
+		   try{
+			   aspirate = json.getJSONObject("action").getDouble("aspirate");
+		   }catch(Exception apex){
+		   }
+		   try{
+			   grip = json.getJSONObject("action").getInt("grip");
+		   }catch(Exception gex){
+		   }
+		   try{
+			   json.getJSONObject("action").get("blowout");
+			   blowout = true;
+		   }catch(Exception bex){
+		   }   
+		   Log.d(TAG, "ingredient:"+ingredient);
+		   Log.d(TAG, "time:"+String.valueOf(time));
+		   Log.d(TAG, "aspirate:"+String.valueOf(aspirate));
+		   Log.d(TAG, "grip:"+String.valueOf(grip));
+		   Log.d(TAG, "blowout:"+String.valueOf(blowout));
+			   
+		   // 1. Create delay if any
+		   if(time>0.0){
+			   proceed = false;
+			   Delay del = new Delay(time*1000);
+			   del.run();
+		   }
+		   
+		   while(!proceed){ /*NOOP*/ }
+		   
+		   // 2. Create gcode commands for completing action
+		   StringBuilder ordnance = new StringBuilder();
+		   String cmdStr;
+		   Location loco = hIngredients.get(ingredient);
+		   String xgo = String.valueOf(loco.x);
+		   Log.d(TAG, "xgo = " + xgo);
+		   String ygo = String.valueOf(loco.y);
+		   Log.d(TAG, "ygo = " + ygo);
+		   idx++;
+		   cmdStr = "N" + idx + " g0X"+xgo+"Y"+ygo+"\n";
+		   whackattack.add(cmdStr);
+		   
+		   String zgo = String.valueOf(loco.z);
+		   Log.d(TAG, "zgo = " + zgo);
+		   idx++;
+		   cmdStr = "N" + idx + " g0Z"+zgo+"\n";
+		   whackattack.add(cmdStr);
+		   
+		   String ago = "";
+		   switch(pipette){
+			   case 0:
+				   break;
+			   case 1:
+				   break;
+			   case 2:
+				   break;
+			   case 3:
+				   break;
+			   case 4:
+				   break;
+			   default:
+				   break;
+		   }
+		   if(!ago.equals("")){
+			   idx++;
+			   cmdStr = "N" + idx + "M5\n";
+			   whackattack.add(cmdStr);
+			   idx++;
+			   cmdStr = "N" + idx + " g0A" + ago + "\n";
+			   whackattack.add(cmdStr);
+		   }
+		   
+		   if(grip==0){
+			   idx++;
+			   cmdStr = "N" + idx + "M3\n";
+			   whackattack.add(cmdStr);
+			   idx++;
+			   cmdStr = "N" + idx + " g0A"+String.valueOf(bopen)+"\n";
+			   whackattack.add(cmdStr);
+		   }else if(grip==1){
+			   idx++;
+			   cmdStr = "N" + idx + "M3\n";
+			   whackattack.add(cmdStr);
+			   idx++;
+			   cmdStr = "N" + idx + " g0A"+String.valueOf(bclose)+"\n";
+			   whackattack.add(cmdStr);
+		   }
+		   
+		   if(blowout){
+			   idx++;
+			   cmdStr = "N" + idx + "M5\n";
+			   whackattack.add(cmdStr);
+			   idx++;
+			   cmdStr = "N" + idx + " g0A"+String.valueOf(ablow)+"\n";
+			   whackattack.add(cmdStr);
+		   }
+		   
+		   // Z return to 0 at end of job
+		   idx++;
+		   cmdStr = "N" + idx + "g0Z0\n";
+		   whackattack.add(cmdStr);
+		   
+		   // 3. Add them to whackattack queue (throughout above)
+		   
+		   return true;
+	   }
+	   
+	   public void endSequence(){
+		   
+	   }
+	   
+	   private class Delay implements Runnable{
+		   int _delay=0;
+		   public Delay(double delay){
+			   _delay = (int)delay;
+		   }
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			try {
+				Thread.sleep(_delay);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			proceed = true;
+		}
+		   
+	   }
+   }
+   
+   
+   private class Location{
+	   public double x, y, z;
+	   public String ingredient;
+	   public int pipette;
+	   Location(){
+		   
+	   }	
+	   
+   }
+   
    
    
    
