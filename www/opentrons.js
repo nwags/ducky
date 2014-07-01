@@ -92,7 +92,7 @@ module.exports = {
 	cordova.exec(success, failure, "OTBTAlpha", "reset", []);
     },
     
-    run: function (success, failure, job) {
+    run: function (job, success, failure) {
     	cordova.exec(success, failure, "OTBTAlpha", "run", [job]);
     }
 };
