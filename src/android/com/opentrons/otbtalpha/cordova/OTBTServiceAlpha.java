@@ -42,7 +42,7 @@ public class OTBTServiceAlpha extends Service{
 	
     
     public static String args;
-    public static JSONArray job;
+    public static JSONObject job;
     public static JSONArray ingredients;
     
 	
@@ -104,7 +104,14 @@ public class OTBTServiceAlpha extends Service{
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 		args = intent.getStringExtra("args");
-		(new Thread(new BoomThread(job, ingredients))).start();
+		try {
+			job = new JSONObject(args);
+			(new Thread(new BoomThread(job))).start();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	@Override  
@@ -121,20 +128,12 @@ public class OTBTServiceAlpha extends Service{
 	 * Private methods 
 	 ************************************************************************************************
 	 */
-	private JSONArray getConfig() throws JSONException{
-		JSONArray json = new JSONArray();
-		if(job!=null)
-			json.put(0, job);
-		
-		if(ingredients!=null)
-			json.put(1, ingredients);
-		
-		return json;
+	private JSONObject getConfig() throws JSONException{
+		return job;
 	}
 	
-	private void setConfig(JSONArray array) throws JSONException {
-		job = array.getJSONArray(0);
-		ingredients = array.getJSONArray(1);
+	private void setConfig(JSONObject joob) throws JSONException {
+		job = joob;
 	}
 	
 	
@@ -195,12 +194,12 @@ public class OTBTServiceAlpha extends Service{
 		@Override
 		public String getConfiguration() throws RemoteException {
 			try {
-				JSONArray array;
-				array = getConfig();
-				if (array == null)
+				JSONObject argh;
+				argh = getConfig();
+				if (argh == null)
 					return "";
 				else 
-					return array.toString();
+					return argh.toString();
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
@@ -225,10 +224,10 @@ public class OTBTServiceAlpha extends Service{
 		@Override
 		public void run(String configuration) throws RemoteException {
 			try{
-				JSONArray array = null;
+				JSONObject argh = null;
 				if(configuration.length()>0){
-					array = new JSONArray(configuration);
-					setConfig(array);
+					argh = new JSONObject(configuration);
+					setConfig(argh);
 					runOnce();
 				}
 			}catch(Exception ex){
@@ -311,8 +310,9 @@ public class OTBTServiceAlpha extends Service{
    
    private class BoomThread implements Runnable {
 	   
-	   private JSONArray mJob;
+	   private JSONObject mJob;
 	   private JSONArray mIngredients;
+	   private JSONArray mProtocol;
 	   private OTBTWorkerAlpha whack;
 	   private String mMessage = "";
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
@@ -383,9 +383,20 @@ public class OTBTServiceAlpha extends Service{
 	   
 	   
 	   
-	   public BoomThread(JSONArray job, JSONArray ingredients) {
+	   public BoomThread(JSONObject job) {
 		   mJob = job;
-		   mIngredients = ingredients;
+		   try {
+			   pipette = job.getInt("pipette");
+		   } catch (JSONException e1) {
+			   // TODO Auto-generated catch block
+			    e1.printStackTrace();
+		   }
+		   try {
+			   mIngredients = job.getJSONArray("ingredients");
+		   } catch (JSONException e) {
+			   // TODO Auto-generated catch block
+			   e.printStackTrace();
+		   }
 		   whack = new OTBTWorkerAlpha(mHandler);
 		   
 		   try{
@@ -396,7 +407,6 @@ public class OTBTServiceAlpha extends Service{
 				   loco.x = jay.getDouble("x");
 				   loco.y = jay.getDouble("y");
 				   loco.z = jay.getDouble("z");
-				   loco.pipette = jay.getInt("pipette");
 				   hIngredients.put(loco.ingredient, loco);
 			   }
 		   }catch(Exception ex){
@@ -429,7 +439,7 @@ public class OTBTServiceAlpha extends Service{
 		    			//PluginResult result = new PluginResult(PluginResult.Status.OK, jsonStr);
 		                //result.setKeepCallback(true);
 		                //dataAvailableCallback.sendPluginResult(result);
-		    			if(mMessage!=null&&!mMessage.equals("")){
+		    			if(mMessage!=null&&!mMessage.equals("")) {
 		    				// TODO: SEND MESSAGE(JSON) BACK TO UI
 		    			}
 		    		} catch(Exception e){
@@ -479,7 +489,7 @@ public class OTBTServiceAlpha extends Service{
 					   }
 					   
 				   }else{
-					   if(!commandSetup(mJob.getJSONObject(ji++)));
+					   if(!commandSetup(mJob));
 					   		endSequence();
 					   
 				   }
@@ -735,14 +745,11 @@ public class OTBTServiceAlpha extends Service{
    private class Location{
 	   public double x, y, z;
 	   public String ingredient;
-	   public int pipette;
 	   Location(){
 		   
 	   }	
 	   
    }
-   
-   
    
    
 }
