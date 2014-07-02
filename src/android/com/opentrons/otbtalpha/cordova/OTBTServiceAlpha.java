@@ -143,6 +143,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 		args = intent.getStringExtra("args");
+<<<<<<< HEAD
 		address = intent.getStringExtra("address");
 		Log.d(TAG, "args: " + args);
 		Log.d(TAG, "address: " + address);
@@ -152,6 +153,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 				BoomThread boomer = new BoomThread(job, address);
 				dHandler.postDelayed(boomer, 1000);
 			}
+=======
+		try {
+			job = new JSONObject(args);
+			(new Thread(new BoomThread(job))).start();
+>>>>>>> FETCH_HEAD
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -356,8 +362,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private JSONObject mJob;
 	   private JSONArray mIngredients;
 	   private JSONArray mProtocol;
+<<<<<<< HEAD
 	   //private OTBTWorkerAlpha whack;
 	   private String mAddress;
+=======
+	   private OTBTWorkerAlpha whack;
+>>>>>>> FETCH_HEAD
 	   private String mMessage = "";
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
 	   private HashMap<String, Location> hIngredients;
@@ -374,24 +384,92 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private boolean running = true;
 	   private boolean firstrun = true;
 	   
+<<<<<<< HEAD
 	   public BoomThread(JSONObject job, String address) {
 		   mJob = job;
 		   mAddress = address;
 		   try {
 			   pipette = job.getInt("pipette");
 			   Log.d(TAG, "pipette = "+String.valueOf(pipette));
+=======
+	   private final Handler mHandler = new Handler() {
+		   
+	        public void handleMessage(Message msg) {
+	            switch (msg.what) {
+	                case MESSAGE_READ:
+	                   buffer.append((String)msg.obj);
+	                   
+	                   boomerang();
+	                   //if (dataAvailableCallback != null) {
+	                   //    sendDataToSubscriber();
+	                   //}
+	                   // TODO: NOTIFY JOB RUNNING THREAD
+	                   /*
+	                   if(jogDataCallback != null){ //nwags
+	                   	sendJogDataToSubscriber();
+	                   }*/
+	                   break;
+	                case MESSAGE_STATE_CHANGE:
+
+	                   if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
+	                   switch (msg.arg1) {
+	                       case OTBTWorkerAlpha.STATE_CONNECTED:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTED");
+	                           notifyConnectionSuccess();
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_CONNECTING:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTING");
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_LISTEN:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_LISTEN");
+	                           break;
+	                       case OTBTWorkerAlpha.STATE_NONE:
+	                           Log.i(TAG, "BluetoothSerialService.STATE_NONE");
+	                           break;
+	                   }
+	                   break;
+	               case MESSAGE_WRITE:
+	                   //  byte[] writeBuf = (byte[]) msg.obj;
+	                   //  String writeMessage = new String(writeBuf);
+	                   //  Log.i(TAG, "Wrote: " + writeMessage);
+	                   break;
+	               case MESSAGE_DEVICE_NAME:
+	                   Log.i(TAG, msg.getData().getString(DEVICE_NAME));
+	                   break;
+	               case MESSAGE_TOAST:
+	                   String message = msg.getData().getString(TOAST);
+	                   notifyConnectionLost(message);
+	                   break;
+	            }
+	        }
+	   };
+	   
+	   
+	   
+	   public BoomThread(JSONObject job) {
+		   mJob = job;
+		   try {
+			   pipette = job.getInt("pipette");
+>>>>>>> FETCH_HEAD
 		   } catch (JSONException e1) {
 			   // TODO Auto-generated catch block
 			    e1.printStackTrace();
 		   }
 		   try {
 			   mIngredients = job.getJSONArray("ingredients");
+<<<<<<< HEAD
 			   Log.d(TAG, "ingredients = "+mIngredients.toString());
+=======
+>>>>>>> FETCH_HEAD
 		   } catch (JSONException e) {
 			   // TODO Auto-generated catch block
 			   e.printStackTrace();
 		   }
+<<<<<<< HEAD
 		   
+=======
+		   whack = new OTBTWorkerAlpha(mHandler);
+>>>>>>> FETCH_HEAD
 		   
 		   try{
 			   for(int i=0; i<mIngredients.length(); i++){
@@ -818,6 +896,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		}
 	};
    
+<<<<<<< HEAD
 	private ServiceConnection serviceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -859,5 +938,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		
 	}
 	
+=======
+>>>>>>> FETCH_HEAD
 }
 
