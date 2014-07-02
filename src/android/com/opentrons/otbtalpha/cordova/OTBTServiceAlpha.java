@@ -50,7 +50,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
     public static String args;
     public static JSONObject job;
     public static JSONArray ingredients;
-    public static String address;
     
 	
     StringBuffer buffer = new StringBuffer();
@@ -143,14 +142,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 		args = intent.getStringExtra("args");
-<<<<<<< HEAD
-		address = intent.getStringExtra("address");
 		Log.d(TAG, "args: " + args);
-		Log.d(TAG, "address: " + address);
 		try {
 			if(!boomthreading){
 				job = new JSONObject(args);
-				BoomThread boomer = new BoomThread(job, address);
+				BoomThread boomer = new BoomThread(job);
 				dHandler.postDelayed(boomer, 1000);
 			}
 =======
@@ -362,12 +358,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private JSONObject mJob;
 	   private JSONArray mIngredients;
 	   private JSONArray mProtocol;
-<<<<<<< HEAD
-	   //private OTBTWorkerAlpha whack;
-	   private String mAddress;
-=======
-	   private OTBTWorkerAlpha whack;
->>>>>>> FETCH_HEAD
 	   private String mMessage = "";
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
 	   private HashMap<String, Location> hIngredients;
@@ -384,10 +374,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private boolean running = true;
 	   private boolean firstrun = true;
 	   
-<<<<<<< HEAD
-	   public BoomThread(JSONObject job, String address) {
+	   public BoomThread(JSONObject job) {
 		   mJob = job;
-		   mAddress = address;
 		   try {
 			   pipette = job.getInt("pipette");
 			   Log.d(TAG, "pipette = "+String.valueOf(pipette));
