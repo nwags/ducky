@@ -1059,7 +1059,6 @@ public class OTBTLogicAlpha implements IUpdateListener{
 						this.mService = new Intent(this.mServiceName);
 						
 						this.mService.putExtra("args", args.getJSONObject(0).toString());
-						this.mService.putExtra("address", macAddress);
 						Log.d(LOCALTAG, "Attempting to start service... " + this.mService);
 						this.mContext.startService(this.mService);
 						currentlyBooming = true;
