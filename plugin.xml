@@ -33,7 +33,7 @@
 
         <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTAlpha.java"
             target-dir="src/com/opentrons/otbtalpha/cordova"/>
-        <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTWorkerAlpha.java"
+        <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTBlueServiceAlpha.java"
             target-dir="src/com/opentrons/otbtalpha/cordova"/>
         <source-file src="src/android/com/opentrons/otbtalpha/cordova/OTBTServiceAlpha.java"
             target-dir="src/com/opentrons/otbtalpha/cordova"/>

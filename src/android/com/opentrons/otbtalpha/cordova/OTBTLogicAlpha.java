@@ -20,6 +20,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -64,7 +65,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public static double zmax=200.0;
 	public static double amax=24.0;
 	public static boolean power=true;
-	
+	public static String macAddress;
 	/*
 	 ************************************************************************************************
 	 * Keys 
@@ -127,7 +128,8 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 	public static final int ERROR_EXCEPTION_CODE = -99;
 	
-	
+	public static final String blueName = OTBTBlueServiceAlpha.class.getName();
+	public static ServiceDetails blueService;
 	public boolean testee = false;
 	/*
 	 ************************************************************************************************
@@ -145,7 +147,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
     //nwags-callbacks
     //private CallbackContext jogDataCallback;
     private BluetoothAdapter bluetoothAdapter;
-    private OTBTWorkerAlpha otbtworker;
+    //private OTBTWorkerAlpha otbtworker;
     
     StringBuffer buffer = new StringBuffer();
 	
@@ -158,9 +160,39 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	// Part fix for https://github.com/Red-Folder/Cordova-Plugin-BackgroundService/issues/19
 	//public BackgroundServicePluginLogic() {
 	//}
-
+    
 	public OTBTLogicAlpha(Context context) {
 		this.mContext = context;
+		
+		try{
+			//String blueName = OTBTBlueServiceAlpha.class.getName();//"BLUE";
+			
+			Log.d(TAG, "Finding servicename " + blueName);
+			
+			ServiceDetails service = null;
+			Log.d(TAG, "Services contains " + this.mServices.size() + " records");
+			
+			if(this.mServices.containsKey(blueName)) {
+				Log.d(TAG, "Found existing ServiceDetails");
+				service = this.mServices.get(blueName);
+			} else {
+				Log.d(TAG, "Creating new ServiceDetails");
+				service = new ServiceDetails(this.mContext, blueName);
+				this.mServices.put(blueName, service);
+				blueService = service;
+			}
+			
+			if(!service.isInitialised())
+				service.initialise();
+			// TODO Start service and all that jazz
+			service.startService();//.startBooming(args, listener, listenerExtras);
+			//result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			
+		}catch(Exception ex){
+			Log.d(TAG, "starting BLUE failed", ex);
+			//result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		
 	}
 
 	/*
@@ -236,9 +268,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 	        }
 
-	        if (otbtworker == null) {
-	            otbtworker = new OTBTWorkerAlpha(mHandler);
-	        }
+//	        if (otbtworker == null) {
+//	            otbtworker = new OTBTWorkerAlpha(mHandler);
+//	        }
 			
 			if(ACTION_LIST.equals(action)){
 				
@@ -372,12 +404,24 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult connect(CordovaArgs args, boolean secure, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			String macAddress = args.getString(0);
-			BluetoothDevice device = bluetoothAdapter.getRemoteDevice(macAddress);
+			macAddress = args.getString(0);
 			
-			connectCallback = ((CallbackContext) listenerExtras[0]);
-            otbtworker.connect(device, secure);
-
+			try{
+				Log.d(TAG, "getting BLUE service");
+				if(this.mServices != null &&
+						this.mServices.size() > 0){
+					Log.d(TAG, "Found services");
+					
+					ServiceDetails service = this.mServices.get(blueName);
+					Log.d(TAG, "Calling BLUE service");
+					service.connect(macAddress);
+					connectCallback = ((CallbackContext) listenerExtras[0]);
+				}
+					
+			}catch(Throwable t){
+				Log.d(TAG, "Error occurred while getting BLUE, stop holding your breath", t);
+			}
+			
             PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
             pluginResult.setKeepCallback(true);
             ((CallbackContext) listenerExtras[0]).sendPluginResult(pluginResult);
@@ -412,17 +456,17 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
                     if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                     switch (msg.arg1) {
-                        case OTBTWorkerAlpha.STATE_CONNECTED:
+                        case OTBTBlueServiceAlpha.STATE_CONNECTED:
                             Log.i(TAG, "BluetoothSerialService.STATE_CONNECTED");
                             notifyConnectionSuccess();
                             break;
-                        case OTBTWorkerAlpha.STATE_CONNECTING:
+                        case OTBTBlueServiceAlpha.STATE_CONNECTING:
                             Log.i(TAG, "BluetoothSerialService.STATE_CONNECTING");
                             break;
-                        case OTBTWorkerAlpha.STATE_LISTEN:
+                        case OTBTBlueServiceAlpha.STATE_LISTEN:
                             Log.i(TAG, "BluetoothSerialService.STATE_LISTEN");
                             break;
-                        case OTBTWorkerAlpha.STATE_NONE:
+                        case OTBTBlueServiceAlpha.STATE_NONE:
                             Log.i(TAG, "BluetoothSerialService.STATE_NONE");
                             break;
                     }
@@ -538,7 +582,6 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			posa = t_posa*Math.PI*2.0*rosa/360.0;
 			Log.d(TAG, "posa = "+String.valueOf(posa));
 			if(abc==0){
-<<<<<<< HEAD
 				jResult.put("a", posa-a_diff);
 			}else if(abc==1){
 				jResult.put("b", posa-b_diff);
@@ -549,24 +592,6 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
 			Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
 			Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
-=======
-				b_diff+=(posa-b_diff);
-				c_diff+=(posa-c_diff);
-				jResult.put("a", posa-a_diff);
-			}else if(abc==1){
-				a_diff+=(posa-a_diff);
-				c_diff+=(posa-c_diff);
-				jResult.put("b", posa-b_diff);
-			}else if(abc==2){
-				a_diff+=(posa-a_diff);
-				b_diff+=(posa-b_diff);
-				jResult.put("c", posa-c_diff);
-			}
-			jResult.put("a", posa);
-			Log.d(TAG, "a_diff="+String.valueOf(a_diff));
-			Log.d(TAG, "b_diff="+String.valueOf(b_diff));
-			Log.d(TAG, "c_diff="+String.valueOf(c_diff));
->>>>>>> FETCH_HEAD
     	}
     	if (sr.has("stat")){
 			switch (sr.getInt("stat")){
@@ -610,9 +635,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult disconnect(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			connectCallback = null;
-			otbtworker.stop();
-			((CallbackContext)listenerExtras[0]).success();
+			blueService.disconnect();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
 			Log.d(TAG, "disconnect failed", ex);
@@ -669,19 +692,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	}
 	
 	public ExecuteResult isconnected(Object[] listenerExtras){
-		ExecuteResult result = null;
-		try{
-			if(otbtworker.getState()==OTBTWorkerAlpha.STATE_CONNECTED){
-				((CallbackContext)listenerExtras[0]).success();
-			} else {
-				((CallbackContext)listenerExtras[0]).error("Not connected.");
-			}
-			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-		}catch(Exception ex){
-			Log.d(TAG, "isconnected failed", ex);
-			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
-		}
-		return result;
+		return blueService.getState(listenerExtras);
 	}
 	
 	public ExecuteResult clear(Object[] listenerExtras){
@@ -709,27 +720,27 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		LOG.d(TAG, "reset");
 	    		Log.d(TAG, "reset");
 	    		byte[] rst = {0x18};
-	    		otbtworker.write(rst);
+	    		blueService.write(rst);
 	    		((CallbackContext)listenerExtras[0]).success();
 	    	} else if(json.has("stop")) {
 	    		LOG.d(TAG, "stop");
 	    		Log.d(TAG, "stop");
-	    		otbtworker.write("!%\n".getBytes());
+	    		blueService.write("!%\n".getBytes());
 	    		((CallbackContext)listenerExtras[0]).success();
 	    	} else if(json.has("power")) {
 	    		LOG.d(TAG, "power");
 	    		Log.d(TAG, "power");
 	    		if(json.getBoolean("power")){
-	    			otbtworker.write("$me\n".getBytes());
-	    			otbtworker.write("{\"1pm\":\"1\"}\n".getBytes());
-	    			otbtworker.write("{\"2pm\":\"1\"}\n".getBytes());
-	    			otbtworker.write("{\"3pm\":\"1\"}\n".getBytes());
-	    			otbtworker.write("{\"4pm\":\"1\"}\n".getBytes());
+	    			blueService.write("$me\n".getBytes());
+	    			blueService.write("{\"1pm\":\"1\"}\n".getBytes());
+	    			blueService.write("{\"2pm\":\"1\"}\n".getBytes());
+	    			blueService.write("{\"3pm\":\"1\"}\n".getBytes());
+	    			blueService.write("{\"4pm\":\"1\"}\n".getBytes());
 	    			power = true;
 	    			((CallbackContext)listenerExtras[0]).success();
 	                
 	    		}else{
-	    			otbtworker.write("$md\n".getBytes());
+	    			blueService.write("$md\n".getBytes());
 	    			power = false;
 	    			((CallbackContext)listenerExtras[0]).success();
 	    		}
@@ -758,7 +769,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    	}
 	    	if(json.has("a")) {
 	    		abc=0;
-	    		otbtworker.write("m5\n".getBytes());
+	    		blueService.write("m5\n".getBytes());
 	    		double goa = json.getDouble("a");//*amax;
 	    		if(testee){
 	    			testee=false;
@@ -774,7 +785,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		gocode+=gogoStr;
 	    	}else if(json.has("b")){
 	    		abc=1;
-	    		otbtworker.write("m3\n".getBytes());
+	    		blueService.write("m3\n".getBytes());
 	    		double gob = json.getDouble("b");
 	    		gob-=b_diff;
 	    		a_diff+=(gob-a_diff);
@@ -783,7 +794,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		gocode+=gogoStr;
 	    	}else if(json.has("c")){
 	    		abc=2;
-	    		otbtworker.write("m4\n".getBytes());
+	    		blueService.write("m4\n".getBytes());
 	    		double goc = json.getDouble("c");
 	    		goc-=c_diff;
 	    		a_diff+=(goc-a_diff);
@@ -796,7 +807,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    	Log.d(TAG, "a_diff = "+String.valueOf(a_diff));
 	    	Log.d(TAG, "b_diff = "+String.valueOf(b_diff));
 	    	Log.d(TAG, "c_diff = "+String.valueOf(c_diff));
-	    	otbtworker.write(gocode.getBytes());
+	    	blueService.write(gocode.getBytes());
 	        ((CallbackContext)listenerExtras[0]).success();
 			
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
@@ -852,7 +863,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult home(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			otbtworker.write("{\"gc\":\"G28.2 X0 Y0 Z0\"}\n".getBytes());
+			blueService.write("{\"gc\":\"G28.2 X0 Y0 Z0\"}\n".getBytes());
 	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
@@ -885,7 +896,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				service.initialise();
 			// TODO Start service and all that jazz
 			service.startBooming(args, listener, listenerExtras);
-			
+			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 			
 		}catch(Exception ex){
 			Log.d(TAG, "run failed", ex);
@@ -948,7 +959,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		private Context mContext;
 		
 		private OTBTApiAlpha mApi;
-
+		
 		private String mUniqueID = java.util.UUID.randomUUID().toString();
 		
 		private boolean mInitialised = false;
@@ -957,7 +968,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		
 		private Object mServiceConnectedLock = new Object();
 		private Boolean mServiceConnected = null;
-
+		
 		private IUpdateListener mListener = null;
 		private Object[] mListenerExtras = null;
 		
@@ -974,6 +985,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			this.mServiceName = serviceName;
 		}
 		
+		public ExecuteResult connect(String macAddress) {
+			Log.d(LOCALTAG, "Starting connect(String macAddress)");
+			ExecuteResult result = null;
+			
+			try{
+				Log.d(LOCALTAG, "Attempting to connect");
+				mApi.connect(macAddress);
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (Exception ex) {
+				Log.d(LOCALTAG, "startBooming failed", ex);
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			
+			Log.d(LOCALTAG, "Finished startBooming");
+			return result;
+		}
+
 		/*
 		 ************************************************************************************************
 		 * Public Methods 
@@ -1017,12 +1045,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			return result;
 		}
 		
-		
 		public ExecuteResult startBooming(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras)
 		{
 			Log.d(LOCALTAG, "Starting startBooming");
 			ExecuteResult result = null;
-		
+			
 			try{
 				Log.d(LOCALTAG, "Attempting to start Booming");
 				if(!this.currentlyBooming){
@@ -1031,9 +1058,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					try{
 						this.mService = new Intent(this.mServiceName);
 						
-						this.mService.putExtra("args", args.toString());
-						
-						Log.d(LOCALTAG, "Attempting to start service");
+						this.mService.putExtra("args", args.getJSONObject(0).toString());
+						this.mService.putExtra("address", macAddress);
+						Log.d(LOCALTAG, "Attempting to start service... " + this.mService);
 						this.mContext.startService(this.mService);
 						currentlyBooming = true;
 						Log.d(LOCALTAG, "Attempting to bind to service");
@@ -1069,7 +1096,49 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			return result;
 		}
 		
+		public ExecuteResult write(byte[] msg) {
+			Log.d(LOCALTAG, "starting write(byte[] msg)");
+			ExecuteResult result = null;
+			try {
+				mApi.write(msg);
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
 		
+		public ExecuteResult disconnect(){
+			Log.d(LOCALTAG, "starting disconnect()");
+			ExecuteResult result = null;
+			try{
+				mApi.disconnect();
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex) {
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
+		
+		public ExecuteResult getState(Object[] listenerExtras){
+			Log.d(LOCALTAG, "starting getState(Object[] listenerExtras)");
+			ExecuteResult result = null;
+			try{
+				if(mApi.getState()==OTBTBlueServiceAlpha.STATE_CONNECTED){
+					((CallbackContext)listenerExtras[0]).success();
+				} else {
+					((CallbackContext)listenerExtras[0]).error("Not connected.");
+				}
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex){
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
 		
 		public ExecuteResult stopService()
 		{
@@ -1367,7 +1436,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				}
 
 			}
-
+			
 			@Override
 			public void onServiceDisconnected(ComponentName name) {
 				synchronized(mServiceConnectedLock) {
@@ -1377,34 +1446,84 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				}
 			}
 		};
-
+		
 		private OTBTListenerAlpha.Stub serviceListener = new OTBTListenerAlpha.Stub() {
 			@Override
 			public void handleUpdate() throws RemoteException {
 				handleLatestResult();
 			}
-
+			
 			@Override
 			public String getUniqueID() throws RemoteException {
 				return mUniqueID;
 			}
-
+			
 			@Override
 			public void sendMessage(String data) throws RemoteException {
 				// TODO Auto-generated method stub
 				
 			}
-
+			
 			@Override
 			public void notifySuccess() throws RemoteException {
 				// TODO Auto-generated method stub
 				
 			}
-
+			
 			@Override
 			public void notifyError(String error) throws RemoteException {
 				// TODO Auto-generated method stub
 				
+			}
+
+			@Override
+			public void sendBundle(Bundle bunt) throws RemoteException {
+				int what = bunt.getInt("what");
+				switch (what) {
+                case MESSAGE_READ:
+                   buffer.append(bunt.getString("message"));
+                   
+                   if (dataAvailableCallback != null) {
+                       sendDataToSubscriber();
+                   }
+                   /*
+                   if(jogDataCallback != null){ //nwags
+                   	sendJogDataToSubscriber();
+                   }*/
+                   break;
+                case MESSAGE_STATE_CHANGE:
+                	int arg1 = bunt.getInt("state");
+                   if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + arg1);
+                   switch (arg1) {
+                       case OTBTBlueServiceAlpha.STATE_CONNECTED:
+                           Log.i(TAG, "BLUE.STATE_CONNECTED");
+                           notifyConnectionSuccess();
+                           break;
+                       case OTBTBlueServiceAlpha.STATE_CONNECTING:
+                           Log.i(TAG, "BLUE.STATE_CONNECTING");
+                           break;
+                       case OTBTBlueServiceAlpha.STATE_LISTEN:
+                           Log.i(TAG, "BLUE.STATE_LISTEN");
+                           break;
+                       case OTBTBlueServiceAlpha.STATE_NONE:
+                           Log.i(TAG, "BLUE.STATE_NONE");
+                           break;
+                   }
+                   break;
+               case MESSAGE_WRITE:
+                   //  byte[] writeBuf = (byte[]) msg.obj;
+                   //  String writeMessage = new String(writeBuf);
+                   //  Log.i(TAG, "Wrote: " + writeMessage);
+                   break;
+               case MESSAGE_DEVICE_NAME:
+                   Log.i(TAG, bunt.getString("device_name"));
+                   break;
+               case MESSAGE_TOAST:
+                   String message = bunt.getString("toast"); 
+                   //msg.getData().getString(TOAST);
+                   notifyConnectionLost(message);
+                   break;
+				}
 			}
 		};
 // blah blah blah blah blah blah blah
@@ -1428,7 +1547,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d("ServiceDetails", "No action performed");
 			}
 		}
-
+		
 		private JSONObject createJSONResult(Boolean success, int errorCode, String errorMessage) {
 			JSONObject result = new JSONObject();
 
@@ -1479,7 +1598,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 		    return result;
 		}
-
+		
 		private Boolean isTimerEnabled()
 		{
 			Boolean result = false;
@@ -1492,7 +1611,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
-
+		
 		private Boolean isRegisteredForBootStart()
 		{
 			Boolean result = false;
@@ -1505,7 +1624,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-
+		
 		private Boolean isRegisteredForUpdates()
 		{
 			if (this.mListener == null)
@@ -1513,7 +1632,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			else
 				return true;
 		}
-
+		
 		private JSONObject getConfiguration()
 		{
 			JSONObject result = null;
@@ -1527,7 +1646,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
-
+		
 		private JSONObject getLatestResult()
 		{
 			JSONObject result = null;
@@ -1541,7 +1660,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-
+		
 		private int getTimerMilliseconds()
 		{
 			int result = -1;
@@ -1554,7 +1673,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
-
+		
 	}
 
 	protected class ExecuteResult {
@@ -1629,13 +1748,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		ERROR,
 		INVALID_ACTION
 	}
-
+	
 	@Override
 	public void handleUpdate(ExecuteResult logicResult, Object[] listenerExtras) {
 		// TODO Auto-generated method stub
 		
 	}
-
+	
 	@Override
 	public void closeListener(ExecuteResult logicResult, Object[] listenerExtras) {
 		// TODO Auto-generated method stub

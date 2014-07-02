@@ -16,4 +16,15 @@ interface OTBTApiAlpha {
 	void pause();
 	
 	void kill();
+	
+	void write(inout byte[] data);
+	
+	void connect(String address);
+	
+	int getState();
+	
+	void stop();
+	
+	void disconnect();
+	
 } 

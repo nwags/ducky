@@ -1,11 +1,5 @@
 package com.opentrons.otbtalpha.cordova;
 
-
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 
@@ -19,14 +13,11 @@ import org.apache.cordova.api.*;
 // import org.apache.cordova.CallbackContext;
 // import org.apache.cordova.PluginResult;
 // import org.apache.cordova.LOG;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import com.opentrons.otbtalpha.cordova.OTBTLogicAlpha.ExecuteResult;
 import com.opentrons.otbtalpha.cordova.OTBTLogicAlpha.ExecuteStatus;
 
-import java.util.Set;
 
 /**
  * Cordova Plugin for Serial Communication with Opentrons over Bluetooth (based off of Don Coleman's

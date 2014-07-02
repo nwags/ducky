@@ -5,6 +5,7 @@ interface OTBTListenerAlpha {
 	String getUniqueID();
 	
 	void sendMessage(String data);
+	void sendBundle(inout Bundle bunt);
 	void notifySuccess();
 	void notifyError(String error);
 } 
