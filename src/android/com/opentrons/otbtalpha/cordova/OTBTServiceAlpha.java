@@ -46,23 +46,25 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
 	
+    public static final String blueName = OTBTBlueServiceAlpha.class.getName();
     
     public static String args;
     public static JSONObject job;
     public static JSONArray ingredients;
     
-	
+	public static boolean oscCalled = false;
     StringBuffer buffer = new StringBuffer();
     
     private OTBTApiAlpha mApi;
-    private Object mServiceConnectedLock = new Object();
-	private Boolean mServiceConnected = null;
+    private Object myServiceConnectedLock = new Object();
+	private boolean mServiceConnected = false;
     
     
     private boolean mServiceInitialised = false;
 	private boolean boomthreading = false;
 	private final Object mResultLock = new Object();
 	private JSONObject mLatestResult = null;
+	
 	
 	private List<OTBTListenerAlpha> mListeners = new ArrayList<OTBTListenerAlpha>();
 	
@@ -80,7 +82,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		}
 	}
 	
-	
+	private Handler bHandler = new Handler();
 	
 	/*
 	 ************************************************************************************************
@@ -91,6 +93,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	@Override  
 	public IBinder onBind(Intent intent) {
 		Log.i(TAG, "onBind called");
+		
 		return apiEndpoint;
 	}     
 	
@@ -99,40 +102,90 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		super.onCreate();     
 		Log.i(TAG, "Service creating");
 		if(!mServiceInitialised) {
-			final ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
-			final List<RunningServiceInfo> services = 
-					activityManager.getRunningServices(Integer.MAX_VALUE);
-			for (int i = 0; i < services.size(); i++){
-				if(D){
-					Log.d(TAG,"SERVICES_A|Service Nr. " + i + ":" + services.get(i).service);
-					Log.d(TAG,"SERVICES_B|Service Nr. " + i + " package name : " + services.get(i).service.getPackageName());
-					Log.d(TAG,"SERVICES_C|Service Nr. " + i + " class name : " + services.get(i).service.getClassName());
-				}
-				if(services.get(i).service.getClassName().equals("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha")){
-					Intent intent = new Intent("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha");
-					Log.d(TAG, "Attempting to bind to BLUE");
-					if (this.getApplicationContext().bindService(intent, serviceConnection, 0)) {
-						Log.d(TAG, "Waiting for service connected lock");
-						synchronized(mServiceConnectedLock) {
-							while (mServiceConnected==null) {
-								try {
-									mServiceConnectedLock.wait();
-								} catch (InterruptedException e) {
-									Log.d(TAG, "Interrupt occurred while waiting for connection", e);
-								}
-							}
-							//result = this.mServiceConnected;
-						}
-					}
-				}
-			}
+			
 		}
 		// Duplicating the call to initialiseService across onCreate and onStart
 		// Done this to ensure that my initialisation code is called.
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 	}
-
+	
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId){
+		Log.d(TAG, "onStartCommand called("+intent.toString()+", "+flags+", "+startId+") called");
+		args = intent.getStringExtra("args");
+		Log.d(TAG, "args: " + args);
+		try {
+			job = new JSONObject(args);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Log.d(TAG, "oscCalled? "+oscCalled);
+		if(!oscCalled) {
+			oscCalled = true;
+			//handleCommand(intent);
+		    // We want this service to continue running until it is explicitly
+		    // stopped, so return sticky.
+			Log.d(TAG, "onStartCommand called");
+			final ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
+			final List<RunningServiceInfo> services = 
+					activityManager.getRunningServices(Integer.MAX_VALUE);
+			boolean found = false;
+			for (int i = 0; i < services.size(); i++) {
+				if(D) {
+					Log.d(TAG,"SERVICES_A|Service Nr. " + i + ":" + services.get(i).service);
+					Log.d(TAG,"SERVICES_B|Service Nr. " + i + " package name : " + services.get(i).service.getPackageName());
+					Log.d(TAG,"SERVICES_C|Service Nr. " + i + " class name : " + services.get(i).service.getClassName());
+				}
+				if(services.get(i).service.getClassName().equals("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha")){
+					found = true;
+					break;
+				}
+			}
+			if(!found){
+				Log.d(TAG, "BLUE not found, what gives!?!");
+			}else{
+				if(!mServiceConnected){
+					Intent mIntent = new Intent("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha");
+					mIntent.setClass(this, OTBTBlueServiceAlpha.class);
+					Log.d(TAG, "Attempting to bind to BLUE");
+					if (this.bindService(mIntent, serviceConnectionZ, 1)) {
+						Log.d(TAG, "bindService succeeding... maybe...");
+						/*Log.d(TAG, "Waiting for service connected lock");
+						synchronized(myServiceConnectedLock) {
+							Log.d(TAG, "doing the waiting thing...");
+							while (mServiceConnected==null) {
+								try {
+									myServiceConnectedLock.wait();
+								} catch (InterruptedException e) {
+									Log.d(TAG, "Interrupt occurred while waiting for connection", e);
+								}
+							}
+							//result = this.mServiceConnected;
+							
+						}*/
+						
+					}else{
+						Log.d(TAG, "bindService failed... for sure...");
+					}
+				}else{
+					try {
+						if(!boomthreading){
+							Log.d(TAG, "if(!boomthreading)...");
+							BoomThread boomer = new BoomThread(job);
+							dHandler.postDelayed(boomer, 1000);
+						}
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	    return START_STICKY;
+	}
+	
 	@Override
 	public void onStart(Intent intent, int startId) {
 		Log.i(TAG, "Service started");       
@@ -144,20 +197,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		args = intent.getStringExtra("args");
 		Log.d(TAG, "args: " + args);
 		try {
-			if(!boomthreading){
-				job = new JSONObject(args);
-				BoomThread boomer = new BoomThread(job);
-				dHandler.postDelayed(boomer, 1000);
-			}
-=======
-		try {
 			job = new JSONObject(args);
-			(new Thread(new BoomThread(job))).start();
->>>>>>> FETCH_HEAD
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		
 		
 	}
 	
@@ -324,8 +370,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		
 		if (!this.mServiceInitialised) {
 			Log.i(TAG, "Initialising the service");
-
-						
+			
 			this.mServiceInitialised = true;
 		}
 
@@ -358,9 +403,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private JSONObject mJob;
 	   private JSONArray mIngredients;
 	   private JSONArray mProtocol;
+	   int pee = 0;
+	   int status = 0;
+	   //private OTBTWorkerAlpha whack;
 	   private String mMessage = "";
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
-	   private HashMap<String, Location> hIngredients;
+	   private BlockingQueue<String> whackfinish = new LinkedBlockingQueue<String>();
+	   private HashMap<String, Location> hIngredients = new HashMap<String, Location>();
 	   private int pipette;
 	   private int ji = 0;
 	   private int idx = 0;
@@ -372,95 +421,48 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   
 	   private boolean proceed = true;
 	   private boolean running = true;
-	   private boolean firstrun = true;
+	   private boolean endo = false;
+	   private boolean prepping = true;
+	   
+	   private double posx, posy, posz;
+	   // variables for logging
+	   private int total = 0;
+	   private int current = 0;
+	   private double pct_total = 0.0;
+	   private double pct_current = 0.0;
+	   
 	   
 	   public BoomThread(JSONObject job) {
 		   mJob = job;
+		   
+		   try {
+			   mProtocol = mJob.getJSONArray("protocol");
+			   total = mProtocol.length();
+			   Log.d(TAG, "mProtocol = " + mProtocol.toString());
+			   
+		   } catch (JSONException e2) {
+			   // TODO Auto-generated catch block
+			   e2.printStackTrace();
+		   }
+		   
 		   try {
 			   pipette = job.getInt("pipette");
 			   Log.d(TAG, "pipette = "+String.valueOf(pipette));
-=======
-	   private final Handler mHandler = new Handler() {
-		   
-	        public void handleMessage(Message msg) {
-	            switch (msg.what) {
-	                case MESSAGE_READ:
-	                   buffer.append((String)msg.obj);
-	                   
-	                   boomerang();
-	                   //if (dataAvailableCallback != null) {
-	                   //    sendDataToSubscriber();
-	                   //}
-	                   // TODO: NOTIFY JOB RUNNING THREAD
-	                   /*
-	                   if(jogDataCallback != null){ //nwags
-	                   	sendJogDataToSubscriber();
-	                   }*/
-	                   break;
-	                case MESSAGE_STATE_CHANGE:
-
-	                   if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
-	                   switch (msg.arg1) {
-	                       case OTBTWorkerAlpha.STATE_CONNECTED:
-	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTED");
-	                           notifyConnectionSuccess();
-	                           break;
-	                       case OTBTWorkerAlpha.STATE_CONNECTING:
-	                           Log.i(TAG, "BluetoothSerialService.STATE_CONNECTING");
-	                           break;
-	                       case OTBTWorkerAlpha.STATE_LISTEN:
-	                           Log.i(TAG, "BluetoothSerialService.STATE_LISTEN");
-	                           break;
-	                       case OTBTWorkerAlpha.STATE_NONE:
-	                           Log.i(TAG, "BluetoothSerialService.STATE_NONE");
-	                           break;
-	                   }
-	                   break;
-	               case MESSAGE_WRITE:
-	                   //  byte[] writeBuf = (byte[]) msg.obj;
-	                   //  String writeMessage = new String(writeBuf);
-	                   //  Log.i(TAG, "Wrote: " + writeMessage);
-	                   break;
-	               case MESSAGE_DEVICE_NAME:
-	                   Log.i(TAG, msg.getData().getString(DEVICE_NAME));
-	                   break;
-	               case MESSAGE_TOAST:
-	                   String message = msg.getData().getString(TOAST);
-	                   notifyConnectionLost(message);
-	                   break;
-	            }
-	        }
-	   };
-	   
-	   
-	   
-	   public BoomThread(JSONObject job) {
-		   mJob = job;
-		   try {
-			   pipette = job.getInt("pipette");
->>>>>>> FETCH_HEAD
 		   } catch (JSONException e1) {
 			   // TODO Auto-generated catch block
 			    e1.printStackTrace();
 		   }
 		   try {
 			   mIngredients = job.getJSONArray("ingredients");
-<<<<<<< HEAD
 			   Log.d(TAG, "ingredients = "+mIngredients.toString());
-=======
->>>>>>> FETCH_HEAD
 		   } catch (JSONException e) {
-			   // TODO Auto-generated catch block
 			   e.printStackTrace();
 		   }
-<<<<<<< HEAD
 		   
-=======
-		   whack = new OTBTWorkerAlpha(mHandler);
->>>>>>> FETCH_HEAD
 		   
 		   try{
-			   for(int i=0; i<mIngredients.length(); i++){
+			   for(int i=0; i<mIngredients.length(); i++) {
+				   Log.d(TAG, "adding location "+i);
 				   Location loco = new Location();
 				   JSONObject jay = mIngredients.getJSONObject(i);
 				   loco.ingredient = jay.getString("name");
@@ -470,7 +472,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 				   hIngredients.put(loco.ingredient, loco);
 			   }
 		   }catch(Exception ex){
-			   
+			   ex.printStackTrace();
 		   }
 	   }
 	   
@@ -478,32 +480,47 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   public void run() {
 		   // TODO Auto-generated method stub
 		   Log.d(TAG, "run() called");
-		   boomerang();
+		   //boomerang();
 		   Log.d(TAG, "trying to whack some bytes");
 		   try {
+			   if(mApi==null){
+				   Log.d(TAG, "mApi is null, uh oh");
+			   }
 			   mApi.write("{\"gc\":\"g90 g0 x0y0z0\"}\n".getBytes());
+			   mApi.write("{\"sr\":\"\"}\n".getBytes());
 		   } catch (RemoteException e) {
-			   // TODO Auto-generated catch block
 			   e.printStackTrace();
 		   }
 		   Log.d(TAG, "running = "+String.valueOf(running));
-		   while(running){ /* NOOP */ }
+		   while(running) {
+			   if(buffer.length()>0)
+				   boomerang();
+		   }
 		   boomthreading = false;
 		   Log.d(TAG, "run() finished");
+		   for(OTBTListenerAlpha listener:mListeners){
+			   	try {
+			   		Log.d(TAG, "calling listener.shutMeDown()");
+					listener.shutMeDown();
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		   }
 	   }
 	   
 	   private void boomerang() {
-		   synchronized(this){
-			   Log.d(TAG, "boomerang called");
+		   synchronized(this) {
+			   //Log.d(TAG, "boomerang called");
 			   String data = readUntil("\n");
 			   String jsonStr = "";
-			   if(data != null && data.length() > 0){
+			   if(data != null && data.length() > 0) {
 		    		try {
-		    			Log.d(TAG, "data read = "+data);
+		    			Log.d(TAG, "data read = " + data);
 		    			JSONObject json = new JSONObject(data);
 		    			if (json.has("r")) {
 		    				processBody(json.getJSONObject("r"));
-		    			}else if (json.has("sr")) {
+		    			} else if (json.has("sr")) {
 		    				processStatusReport(json.getJSONObject("sr"));
 		    			}
 		    			//PluginResult result = new PluginResult(PluginResult.Status.OK, jsonStr);
@@ -512,15 +529,62 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		    			if(mMessage!=null&&!mMessage.equals("")) {
 		    				// TODO: SEND MESSAGE(JSON) BACK TO UI
 		    			}
-		    		} catch(Exception e){
+		    		} catch(Exception e) {
 		    			if(e.getMessage()!=null)
 		    				Log.e(TAG, e.getMessage());
 		    			
 		    		}
 		    		
-		    		
-		            boomerang();
 	            }
+			   Log.d(TAG, "status = "+status);
+			   if(status==3){
+				   if(whackattack.size()>0) {
+					   try {
+						   String round = whackattack.take();
+						   mApi.write(round.getBytes());
+					   } catch (InterruptedException e) {
+						   // TODO Auto-generated catch block
+						   e.printStackTrace();
+					   } catch (RemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+					   }
+				   } else {
+					   	Log.d(TAG, "before pee = "+pee);
+					    if(!(pee>=mProtocol.length())){
+						    JSONObject jsahn = null;
+						    // pee here????
+							try {
+								jsahn = mProtocol.getJSONObject(pee++);
+							} catch (JSONException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							commandSetup(jsahn);
+						} else {
+							if(!endo) {
+								endSequence();
+							} else {
+								if(whackfinish.size()>0) {
+									String finisher;
+									try {
+										finisher = whackfinish.take();
+										mApi.write(finisher.getBytes());
+									} catch (InterruptedException e1) {
+										// TODO Auto-generated catch block
+										e1.printStackTrace();
+									} catch (RemoteException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else {
+									running = false;
+									oscCalled = false;
+								}
+							}
+						}
+				   }
+			   }
 		   }
 	   }
 	   
@@ -534,42 +598,29 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   return data;
 	   }
 	   
-	   private String processBody(JSONObject json) throws JSONException {
+	   private synchronized String processBody(JSONObject json) throws JSONException {
 		   Log.d(TAG, "processBody called");
 		   String result = "";
+		   Log.d(TAG, "json: "+json.toString());
+		   
 		   if(json.has("sr"))
 			   result = processStatusReport(json.getJSONObject("sr"));
 		   return result;
 	   }
-	    
 	   
-	   private String processStatusReport(JSONObject sr) throws JSONException{
+	   
+	   private synchronized String processStatusReport(JSONObject sr) throws JSONException {
 		   Log.d(TAG, "processStatusReport called");
 		   String result = "";
+		   Log.d(TAG, "sr: "+ sr.toString());
 		   
 		   if (sr.has("stat")){
-			   if(sr.getInt("stat")==3){
-				   if(whackattack.size()>0){
-					   try {
-						   String round = whackattack.take();
-						   mApi.write(round.getBytes());
-					   } catch (InterruptedException e) {
-						   // TODO Auto-generated catch block
-						   e.printStackTrace();
-					   } catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					   
-				   }else{
-					   if(!commandSetup(mJob));
-					   		endSequence();
-					   
-				   }
-				   
+			   if(sr.getInt("stat")==3) {
+				   status = 3;
+			   } else {
+				   status = 0;
 			   }
 		   }
-		   
 		   
 		   
 		   /*
@@ -647,17 +698,30 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   return result;
 	   }
 	   
+	   /*private class throwB implements Runnable{
+
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			boomerang();
+		}
+		   
+	   }*/
+	   
 	   public boolean commandSetup(JSONObject json){
 		   double time = 0.0;
 		   double aspirate = 0.0;
 		   int grip = 0;
 		   boolean blowout = false;
 		   String ingredient = "";
+		   Bundle b = new Bundle();
+		   b.putInt("what", 6);
+		   b.putString("job_data", "STARTING A NEW LINE... NO BIGGIE");
+		   //bundleAll(b);
 		   
-		   
-		   try{
+		   try {
 			   ingredient = json.getString("ingredient");
-		   }catch(Exception iex){
+		   } catch(Exception iex) {
 			   return false;
 		   }
 		   
@@ -688,13 +752,16 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   if(time>0.0){
 			   proceed = false;
 			   Delay del = new Delay(time*1000);
+			   Log.d(TAG, "starting delay...");
 			   del.run();
 		   }
 		   
 		   while(!proceed){ /*NOOP*/ }
-		   
+		   Log.d(TAG, "proceeding");
 		   // 2. Create gcode commands for completing action
 		   String cmdStr;
+		   if(hIngredients==null)
+			   Log.d(TAG, "hIngredients==null!");
 		   Location loco = hIngredients.get(ingredient);
 		   String xgo = String.valueOf(loco.x);
 		   Log.d(TAG, "xgo = " + xgo);
@@ -770,27 +837,34 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   }
 	   
 	   public void endSequence(){
-		   
+		   Log.d(TAG, "END SEQUENCE!!!");
+		   whackfinish.add("{\"gc\":\"G0Z0\"}\n");
+		   whackfinish.add("{\"gc\":\"G0X0Y0\"}\n");
+		   whackfinish.add("{\"gc\":\"G0A0\"}\n");
+		   endo = true;
 	   }
 	   
 	   private class Delay implements Runnable{
 		   int _delay=0;
 		   public Delay(double delay){
 			   _delay = (int)delay;
+			   Log.d(TAG, "_delay = "+String.valueOf(_delay));
 		   }
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-			try {
-				Thread.sleep(_delay);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				try {
+					Thread.sleep(_delay);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				Log.d(TAG, "proceed = true");
+				proceed = true;
 			}
-			proceed = true;
-		}
 		   
 	   }
+	   
    }
    
    
@@ -882,34 +956,51 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
               break;
 			}
 		}
+
+		
+		@Override
+		public void shutMeDown() throws RemoteException {
+			// NOOP
+		}
 	};
-   
-<<<<<<< HEAD
-	private ServiceConnection serviceConnection = new ServiceConnection() {
+	
+	
+	private ServiceConnection serviceConnectionZ = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			// that's how we get the client side of the IPC connection
+			Log.d(TAG, "onServiceConnected called!");
 			mApi = OTBTApiAlpha.Stub.asInterface(service);
 			try {
 				mApi.addListener(serviceListener);
+				
 			} catch (RemoteException e) {
 				Log.d(TAG, "addListener failed", e);
 			}
 			
-			synchronized(mServiceConnectedLock) {
+			synchronized(myServiceConnectedLock) {
 				mServiceConnected = true;
 
-				mServiceConnectedLock.notify();
+				myServiceConnectedLock.notify();
 			}
-
+			try {
+				if(!boomthreading){
+					Log.d(TAG, "if(!boomthreading)...");
+					BoomThread boomer = new BoomThread(job);
+					dHandler.postDelayed(boomer, 1000);
+				}
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		@Override
 		public void onServiceDisconnected(ComponentName name) {
-			synchronized(mServiceConnectedLock) {
+			synchronized(myServiceConnectedLock) {
 				mServiceConnected = false;
 
-				mServiceConnectedLock.notify();
+				myServiceConnectedLock.notify();
 			}
 		}
 	};
@@ -926,7 +1017,16 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		
 	}
 	
-=======
->>>>>>> FETCH_HEAD
+	private void bundleAll(Bundle b){
+    	for(OTBTListenerAlpha listener: mListeners){
+    		try {
+				listener.sendBundle(b);
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+    }
+	
 }
 
