@@ -8,4 +8,5 @@ interface OTBTListenerAlpha {
 	void sendBundle(inout Bundle bunt);
 	void notifySuccess();
 	void notifyError(String error);
+	void shutMeDown();
 } 
