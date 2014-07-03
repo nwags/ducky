@@ -85,7 +85,7 @@ public class OTBTBlueServiceAlpha extends Service{
 		super.onCreate(); 
 		Log.d(TAG, "onCreate() called");
 		Log.i(TAG, "Service creating");
-		if(!mServiceInitialised){
+		if(!mServiceInitialised) {
 			mAdapter = BluetoothAdapter.getDefaultAdapter();
 	        mState = STATE_NONE;
 		}
