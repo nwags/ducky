@@ -43,6 +43,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
+    public static final int MESSAGE_JOB = 6;
 
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
@@ -129,6 +130,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public static final int ERROR_EXCEPTION_CODE = -99;
 	
 	public static final String blueName = OTBTBlueServiceAlpha.class.getName();
+	public static final String redName = OTBTServiceAlpha.class.getName();
 	public static ServiceDetails blueService;
 	public boolean testee = false;
 	/*
@@ -182,9 +184,12 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				blueService = service;
 			}
 			
-			if(!service.isInitialised())
+			if(!service.isInitialised()){
+				Log.d(TAG, "blueService not yet initialised, initialising...");
 				service.initialise();
+			}
 			// TODO Start service and all that jazz
+			Log.d(TAG, "blueService.startService()");
 			service.startService();//.startBooming(args, listener, listenerExtras);
 			//result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 			
@@ -990,7 +995,10 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			ExecuteResult result = null;
 			
 			try{
-				Log.d(LOCALTAG, "Attempting to connect");
+				Log.d(LOCALTAG, "Attempting to connect to "+macAddress);
+				if(mApi==null){
+					Log.d(LOCALTAG, "mApi is null... not good");
+				}
 				mApi.connect(macAddress);
 				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 			} catch (Exception ex) {
@@ -1057,15 +1065,21 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					
 					try{
 						this.mService = new Intent(this.mServiceName);
-						
+						if(this.mServiceName.equals(redName)){
+							Log.d(LOCALTAG, "it's the redName!");
+							this.mService.setClass(this.mContext, OTBTServiceAlpha.class);
+						}else{
+							Log.d(LOCALTAG, "whoa nelly!: "+this.mServiceName);
+						}
 						this.mService.putExtra("args", args.getJSONObject(0).toString());
+						//this.mService.putExtra("address", macAddress);
 						Log.d(LOCALTAG, "Attempting to start service... " + this.mService);
 						this.mContext.startService(this.mService);
 						currentlyBooming = true;
 						Log.d(LOCALTAG, "Attempting to bind to service");
-						if (this.mContext.bindService(this.mService, serviceConnection, 0)) {
+						if (this.mContext.bindService(this.mService, serviceConnection, 1)) {
 							Log.d(LOCALTAG, "Waiting for service connected lock");
-							synchronized(mServiceConnectedLock) {
+							/*synchronized(mServiceConnectedLock) {
 								while (mServiceConnected==null) {
 									try {
 										mServiceConnectedLock.wait();
@@ -1075,7 +1089,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 								}
 								//result = this.mServiceConnected;
 								registerForUpdates(listener, listenerExtras);
-							}
+							}*/
 						}
 					} catch(Exception ex) {
 						Log.d(LOCALTAG, "bindToService failed", ex);
@@ -1142,9 +1156,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public ExecuteResult stopService()
 		{
 			ExecuteResult result = null;
-			
 			Log.d("ServiceDetails", "stopService called");
-
+			this.currentlyBooming = false;
+			Log.d(TAG, "currentlyBooming set to false");
 			try {
 				
 				Log.d("ServiceDetails", "Unbinding Service");
@@ -1181,7 +1195,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-
+		
 		public ExecuteResult disableTimer()
 		{
 			ExecuteResult result = null;
@@ -1196,7 +1210,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-
+		
 		public ExecuteResult registerForBootStart()
 		{
 			ExecuteResult result = null;
@@ -1282,7 +1296,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
-
+		
 		public ExecuteResult registerForUpdates(IUpdateListener listener, Object[] listenerExtras)
 		{
 			ExecuteResult result = null;
@@ -1331,7 +1345,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
-
+		
 		/*
 		 * Background Service specific methods
 		 */
@@ -1354,7 +1368,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			Log.d("ServiceDetails", "Close finished");
 		}
-
+		
 		private boolean deregisterListener() {
 			boolean result = false;
 
@@ -1390,12 +1404,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			try {
 				this.mService = new Intent(this.mServiceName);
-				
+				if(this.mService==null){
+					Log.d(LOCALTAG, "mService is a null");
+				}
+				if(this.mServiceName.equals(blueName))
+					this.mService.setClass(mContext, OTBTBlueServiceAlpha.class);
+				if(this.mServiceName.equals(redName))
+					this.mService.setClass(mContext, OTBTServiceAlpha.class);
 				Log.d(LOCALTAG, "Attempting to start service");
 				this.mContext.startService(this.mService);
 				
 				Log.d(LOCALTAG, "Attempting to bind to service");
-				if (this.mContext.bindService(this.mService, serviceConnection, 0)) {
+				if (this.mContext.bindService(this.mService, serviceConnection, 1)) {
 					Log.d(LOCALTAG, "Waiting for service connected lock");
 					synchronized(mServiceConnectedLock) {
 						while (mServiceConnected==null) {
@@ -1522,8 +1542,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
                    //msg.getData().getString(TOAST);
                    notifyConnectionLost(message);
                    break;
+               case MESSAGE_JOB:
+            	   String massage = bunt.getString("job_data");
+            	   PluginResult resulto = new PluginResult(PluginResult.Status.OK, massage);
+	               //result.setKeepCallback(true);
+	               dataAvailableCallback.sendPluginResult(resulto);
+            	   break;
 				}
 			}
+
+			@Override
+			public void shutMeDown() throws RemoteException {
+				// TODO Auto-generated method stub
+				Log.d(TAG, "shutMeDown() called");
+				currentlyBooming = false;
+				//stopService();
+			}
+			
 		};
 // blah blah blah blah blah blah blah
 		private void handleLatestResult() {
