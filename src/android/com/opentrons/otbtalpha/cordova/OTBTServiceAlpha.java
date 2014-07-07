@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.cordova.LOG;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,6 +18,7 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -51,6 +51,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
     public static String args;
     public static JSONObject job;
     public static JSONArray ingredients;
+    
+    public static OTBTAlpha pug;
     
 	public static boolean oscCalled = false;
     StringBuffer buffer = new StringBuffer();
@@ -174,8 +176,25 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 						try {
 							if(!boomthreading){
 								Log.d(TAG, "if(!boomthreading)...");
-								BoomThread boomer = new BoomThread(job);
-								dHandler.postDelayed(boomer, 1000);
+								final BoomThread boomer = new BoomThread(job);
+								
+								new AsyncTask<Void, Void, Void>() {
+
+									@Override
+									protected Void doInBackground(
+											Void... params) {
+										try{
+											Thread.sleep(1000);
+										}catch(Exception e){
+											e.printStackTrace();
+										}
+										boomer.run();
+										return null;
+									}
+									
+								}.execute();
+								
+								//dHandler.postDelayed(boomer, 1000);
 							}
 						} catch (Exception e) {
 							// TODO Auto-generated catch block
@@ -208,7 +227,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			e.printStackTrace();
 		}
 		
-		
+		pug = new OTBTAlpha();
 		
 	}
 	
@@ -422,7 +441,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private double bdiff = 0.0;
 	   private double bopen = 0.0;
 	   private double bclose = 0.0;
-	   private double ablow = 0.0;
+	   private double ablow = 16.0;
+	   private double dtip = 22.0;
 	   
 	   private boolean proceed = true;
 	   private boolean checkGCs = true;
@@ -494,7 +514,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   if(mApi==null){
 				   Log.d(TAG, "mApi is null, uh oh");
 			   }
-			   gc = "G90G0X0Y0Z0";
+			   gc = "G90G0X0Y0Z0A0";
 			   String cmd = "{\"gc\":\""+gc+"\"}\n";
 			   mApi.write(cmd.getBytes());
 			   mApi.write("{\"sr\":\"\"}\n".getBytes());
@@ -796,6 +816,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   double aspirate = 0.0;
 		   int grip = 0;
 		   boolean blowout = false;
+		   boolean droptip = false;
 		   String ingredient = "";
 		   Bundle b = new Bundle();
 		   b.putInt("what", 6);
@@ -878,21 +899,9 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   lackattack.add(locb);
 		   whackattack.add(cmdStr);
 		   
-		   String ago = "";
-		   switch(pipette){
-			   case 0:
-				   break;
-			   case 1:
-				   break;
-			   case 2:
-				   break;
-			   case 3:
-				   break;
-			   case 4:
-				   break;
-			   default:
-				   break;
-		   }
+		   double d_pipette = (double)pipette;
+		   String ago = String.valueOf((aspirate/d_pipette)*16.0);
+		   
 		   Location locc = new Location();
 		   locc.x = locb.x;
 		   locc.y = locb.y;
@@ -903,7 +912,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   lackattack.add(locc);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "{\"gc\":\"N" + idx + "G0A" + ago + "\"}\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G91G0A-" + ago + "\"}\n";
 			   whackattack.add(cmdStr);
 		   }else{
 			   
@@ -924,7 +933,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(bopen)+"\"}\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(bopen)+"\"}\n";
 			   lackattack.add(loce);
 			   whackattack.add(cmdStr);
 		   }else if(grip==1){
@@ -933,7 +942,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(bclose)+"\"}\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(bclose)+"\"}\n";
 			   lackattack.add(loce);
 			   whackattack.add(cmdStr);
 		   }
@@ -945,8 +954,22 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
 			   whackattack.add(cmdStr);
 			   idx++;
+			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(ablow)+"\"}\n";
+			   whackattack.add(cmdStr);
+		   }
+		   
+		   if(droptip){
+			   idx++;
+			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
+			   whackattack.add(cmdStr);
+			   idx++;
+			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(dtip)+"\"}\n";
+			   whackattack.add(cmdStr);
+			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(ablow)+"\"}\n";
 			   whackattack.add(cmdStr);
+			   idx++;
+			   
 		   }
 		   
 		   // Z return to 0 at end of job
@@ -955,7 +978,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   locf.y = loce.y;
 		   locf.z = loce.z;
 		   idx++;
-		   cmdStr = "{\"gc\":\"N" + idx + "G0Z0\"}\n";
+		   cmdStr = "{\"gc\":\"N" + idx + "G90G0Z0\"}\n";
 		   lackattack.add(locf);
 		   whackattack.add(cmdStr);
 		   
@@ -980,7 +1003,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   lackattack.add(foca);
 		   lackattack.add(focb);
 		   lackattack.add(focc);
-		   whackfinish.add("{\"gc\":\"G0Z0\"}\n");
+		   whackfinish.add("{\"gc\":\"G90G0Z0\"}\n");
 		   whackfinish.add("{\"gc\":\"G0X0Y0\"}\n");
 		   whackfinish.add("{\"gc\":\"G0A0\"}\n");
 		   endo = true;
@@ -1127,8 +1150,23 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			try {
 				if(!boomthreading){
 					Log.d(TAG, "if(!boomthreading)...");
-					BoomThread boomer = new BoomThread(job);
-					dHandler.postDelayed(boomer, 1000);
+					final BoomThread boomer = new BoomThread(job);
+					new AsyncTask<Void, Void, Void>() {
+
+						@Override
+						protected Void doInBackground(
+								Void... params) {
+							try{
+								Thread.sleep(1000);
+							}catch(Exception e){
+								e.printStackTrace();
+							}
+							boomer.run();
+							return null;
+						}
+						
+					}.execute();
+					//dHandler.postDelayed(boomer, 1000);
 				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -1168,6 +1206,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			}
     	}
     }
+	
+	
 	
 }
 
