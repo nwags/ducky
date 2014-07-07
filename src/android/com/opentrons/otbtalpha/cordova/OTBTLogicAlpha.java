@@ -584,7 +584,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
     	if (sr.has("posa")){
 			double t_posa = sr.getDouble("posa");
 			Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
-			posa = t_posa*Math.PI*2.0*rosa/360.0;
+			posa = (2.0*Math.PI*t_posa*rosa)/360.0;
 			Log.d(TAG, "posa = "+String.valueOf(posa));
 			if(abc==0){
 				jResult.put("a", posa-a_diff);
@@ -794,6 +794,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		double gob = json.getDouble("b");
 	    		gob-=b_diff;
 	    		a_diff+=(gob-a_diff);
+	    		a_diff=0.0;
 	    		c_diff+=(gob-c_diff);
 	    		gogoStr = "a"+String.valueOf(gob);
 	    		gocode+=gogoStr;
@@ -803,6 +804,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		double goc = json.getDouble("c");
 	    		goc-=c_diff;
 	    		a_diff+=(goc-a_diff);
+	    		a_diff=0.0;
 	    		b_diff+=(goc-b_diff);
 	    		gogoStr = "a"+String.valueOf(goc);
 	    		gocode+=gogoStr;
@@ -868,7 +870,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult home(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			blueService.write("{\"gc\":\"G28.2 X0 Y0 Z0\"}\n".getBytes());
+			blueService.write("{\"gc\":\"G28.2X0Y0Z0\"}\n".getBytes());
 	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
