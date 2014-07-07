@@ -115,74 +115,79 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		Log.d(TAG, "onStartCommand called("+intent.toString()+", "+flags+", "+startId+") called");
 		args = intent.getStringExtra("args");
 		Log.d(TAG, "args: " + args);
-		try {
-			job = new JSONObject(args);
-		} catch (JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		Log.d(TAG, "oscCalled? "+oscCalled);
-		if(!oscCalled) {
-			oscCalled = true;
-			//handleCommand(intent);
-		    // We want this service to continue running until it is explicitly
-		    // stopped, so return sticky.
-			Log.d(TAG, "onStartCommand called");
-			final ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
-			final List<RunningServiceInfo> services = 
-					activityManager.getRunningServices(Integer.MAX_VALUE);
-			boolean found = false;
-			for (int i = 0; i < services.size(); i++) {
-				if(D) {
-					Log.d(TAG,"SERVICES_A|Service Nr. " + i + ":" + services.get(i).service);
-					Log.d(TAG,"SERVICES_B|Service Nr. " + i + " package name : " + services.get(i).service.getPackageName());
-					Log.d(TAG,"SERVICES_C|Service Nr. " + i + " class name : " + services.get(i).service.getClassName());
-				}
-				if(services.get(i).service.getClassName().equals("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha")){
-					found = true;
-					break;
-				}
+		if(!(args==null)){
+			try {
+				job = new JSONObject(args);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			if(!found){
-				Log.d(TAG, "BLUE not found, what gives!?!");
-			}else{
-				if(!mServiceConnected){
-					Intent mIntent = new Intent("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha");
-					mIntent.setClass(this, OTBTBlueServiceAlpha.class);
-					Log.d(TAG, "Attempting to bind to BLUE");
-					if (this.bindService(mIntent, serviceConnectionZ, 1)) {
-						Log.d(TAG, "bindService succeeding... maybe...");
-						/*Log.d(TAG, "Waiting for service connected lock");
-						synchronized(myServiceConnectedLock) {
-							Log.d(TAG, "doing the waiting thing...");
-							while (mServiceConnected==null) {
-								try {
-									myServiceConnectedLock.wait();
-								} catch (InterruptedException e) {
-									Log.d(TAG, "Interrupt occurred while waiting for connection", e);
-								}
-							}
-							//result = this.mServiceConnected;
-							
-						}*/
-						
-					}else{
-						Log.d(TAG, "bindService failed... for sure...");
+			Log.d(TAG, "oscCalled? "+oscCalled);
+			if(!oscCalled) {
+				oscCalled = true;
+				//handleCommand(intent);
+			    // We want this service to continue running until it is explicitly
+			    // stopped, so return sticky.
+				Log.d(TAG, "onStartCommand called");
+				final ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
+				final List<RunningServiceInfo> services = 
+						activityManager.getRunningServices(Integer.MAX_VALUE);
+				boolean found = false;
+				for (int i = 0; i < services.size(); i++) {
+					if(D) {
+						Log.d(TAG,"SERVICES_A|Service Nr. " + i + ":" + services.get(i).service);
+						Log.d(TAG,"SERVICES_B|Service Nr. " + i + " package name : " + services.get(i).service.getPackageName());
+						Log.d(TAG,"SERVICES_C|Service Nr. " + i + " class name : " + services.get(i).service.getClassName());
 					}
+					if(services.get(i).service.getClassName().equals("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha")){
+						found = true;
+						break;
+					}
+				}
+				if(!found){
+					Log.d(TAG, "BLUE not found, what gives!?!");
 				}else{
-					try {
-						if(!boomthreading){
-							Log.d(TAG, "if(!boomthreading)...");
-							BoomThread boomer = new BoomThread(job);
-							dHandler.postDelayed(boomer, 1000);
+					if(!mServiceConnected){
+						Intent mIntent = new Intent("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha");
+						mIntent.setClass(this, OTBTBlueServiceAlpha.class);
+						Log.d(TAG, "Attempting to bind to BLUE");
+						if (this.bindService(mIntent, serviceConnectionZ, 1)) {
+							Log.d(TAG, "bindService succeeding... maybe...");
+							/*Log.d(TAG, "Waiting for service connected lock");
+							synchronized(myServiceConnectedLock) {
+								Log.d(TAG, "doing the waiting thing...");
+								while (mServiceConnected==null) {
+									try {
+										myServiceConnectedLock.wait();
+									} catch (InterruptedException e) {
+										Log.d(TAG, "Interrupt occurred while waiting for connection", e);
+									}
+								}
+								//result = this.mServiceConnected;
+								
+							}*/
+							
+						}else{
+							Log.d(TAG, "bindService failed... for sure...");
 						}
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+					}else{
+						try {
+							if(!boomthreading){
+								Log.d(TAG, "if(!boomthreading)...");
+								BoomThread boomer = new BoomThread(job);
+								dHandler.postDelayed(boomer, 1000);
+							}
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
 				}
 			}
+		}else{
+			Log.d(TAG, "args == null, what gives!?!, try again");
 		}
+		
 	    return START_STICKY;
 	}
 	
@@ -408,10 +413,10 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   //private OTBTWorkerAlpha whack;
 	   private String mMessage = "";
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
+	   private BlockingQueue<Location>lackattack = new LinkedBlockingQueue<Location>();
 	   private BlockingQueue<String> whackfinish = new LinkedBlockingQueue<String>();
 	   private HashMap<String, Location> hIngredients = new HashMap<String, Location>();
 	   private int pipette;
-	   private int ji = 0;
 	   private int idx = 0;
 	   private double adiff = 0.0;
 	   private double bdiff = 0.0;
@@ -420,11 +425,14 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private double ablow = 0.0;
 	   
 	   private boolean proceed = true;
+	   private boolean checkGCs = true;
+	   private boolean checkPs = false;
+	   private boolean lockdown = true;
 	   private boolean running = true;
 	   private boolean endo = false;
-	   private boolean prepping = true;
 	   
-	   private double posx, posy, posz;
+	   private double posx, posy, posz, bosx=0.0, bosy=0.0, bosz=0.0;
+	   private String gc;
 	   // variables for logging
 	   private int total = 0;
 	   private int current = 0;
@@ -486,7 +494,9 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   if(mApi==null){
 				   Log.d(TAG, "mApi is null, uh oh");
 			   }
-			   mApi.write("{\"gc\":\"g90 g0 x0y0z0\"}\n".getBytes());
+			   gc = "G90G0X0Y0Z0";
+			   String cmd = "{\"gc\":\""+gc+"\"}\n";
+			   mApi.write(cmd.getBytes());
 			   mApi.write("{\"sr\":\"\"}\n".getBytes());
 		   } catch (RemoteException e) {
 			   e.printStackTrace();
@@ -501,12 +511,18 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   for(OTBTListenerAlpha listener:mListeners){
 			   	try {
 			   		Log.d(TAG, "calling listener.shutMeDown()");
+			   		buffer.setLength(0);
 					listener.shutMeDown();
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 		   }
+	   }
+	   
+	   private synchronized void setProceed(boolean val){
+		   Log.d(TAG, "setting proceed to: "+String.valueOf(val)+", pee="+pee);
+		   proceed = val;
 	   }
 	   
 	   private void boomerang() {
@@ -536,54 +552,84 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		    		}
 		    		
 	            }
-			   Log.d(TAG, "status = "+status);
+			   //Log.d(TAG, "status = "+status);
 			   if(status==3){
-				   if(whackattack.size()>0) {
-					   try {
-						   String round = whackattack.take();
-						   mApi.write(round.getBytes());
-					   } catch (InterruptedException e) {
-						   // TODO Auto-generated catch block
-						   e.printStackTrace();
-					   } catch (RemoteException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-					   }
-				   } else {
-					   	Log.d(TAG, "before pee = "+pee);
-					    if(!(pee>=mProtocol.length())){
-						    JSONObject jsahn = null;
-						    // pee here????
-							try {
-								jsahn = mProtocol.getJSONObject(pee++);
-							} catch (JSONException e) {
+				   if(!lockdown||checkPs){//||checkGCs){
+					   lockdown = true;
+					   if(whackattack.size()>0) {
+						   try {
+							   String round = whackattack.take();
+							   Location tug = lackattack.take();
+							   bosx = tug.x;
+							   bosy = tug.y;
+							   bosz = tug.z;
+							   JSONObject tj;
+								try {
+									tj = new JSONObject(round);
+									gc = tj.getString("gc");
+								} catch (JSONException e) {
+									e.printStackTrace();
+								}
+							   checkGCs = true;
+							   Log.d(TAG, "checkGCs! gc=round="+gc);
+							   mApi.write(round.getBytes());
+						   } catch (InterruptedException e) {
+							   // TODO Auto-generated catch block
+							   e.printStackTrace();
+						   } catch (RemoteException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
-							}
-							commandSetup(jsahn);
-						} else {
-							if(!endo) {
-								endSequence();
+						   }
+						   
+					   } else {
+					   		Log.d(TAG, "before pee = "+pee);
+						    if(!(pee>=mProtocol.length())){
+						    	lockdown = true;
+							    JSONObject jsahn = null;
+							    // pee here????
+								try {
+									jsahn = mProtocol.getJSONObject(pee++);
+								} catch (JSONException e) {
+									e.printStackTrace();
+								}
+								commandSetup(jsahn);
 							} else {
-								if(whackfinish.size()>0) {
-									String finisher;
-									try {
-										finisher = whackfinish.take();
-										mApi.write(finisher.getBytes());
-									} catch (InterruptedException e1) {
-										// TODO Auto-generated catch block
-										e1.printStackTrace();
-									} catch (RemoteException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
+								if(!endo) {
+									endSequence();
 								} else {
-									running = false;
-									oscCalled = false;
+									if(whackfinish.size()>0) {
+										String finisher;
+										try {
+											finisher = whackfinish.take();
+											Location bug = lackattack.take();
+											bosx = bug.x;
+											bosy = bug.y;
+											bosz = bug.z;
+											JSONObject tj;
+											try {
+												tj = new JSONObject(finisher);
+												gc = tj.getString("gc");
+											} catch (JSONException e) {
+												e.printStackTrace();
+											}
+											checkGCs = true;
+											Log.d(TAG, "checkGCs! gc=finisher="+gc);
+											mApi.write(finisher.getBytes());
+										} catch (InterruptedException e1) {
+											e1.printStackTrace();
+										} catch (RemoteException e) {
+											e.printStackTrace();
+										}
+									} else {
+										running = false;
+										oscCalled = false;
+									}
 								}
 							}
-						}
+						   	
+					   }
 				   }
+				   
 			   }
 		   }
 	   }
@@ -602,12 +648,40 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   Log.d(TAG, "processBody called");
 		   String result = "";
 		   Log.d(TAG, "json: "+json.toString());
+		   Log.d(TAG, "checkGCs?:"+checkGCs);
+		   if(checkGCs){
+			   if(json.has("gc")){
+				   Log.d(TAG, "json has gc");
+				   if(checkGC(json.getString("gc"))) {
+					   Log.d(TAG, "gc==gcc");
+					   checkGCs = false;
+					   checkPs = true;
+				   }else{
+					   Log.d(TAG, "gc!=gcc");
+					   Log.d(TAG, "gc="+gc);
+					   Log.d(TAG, "gcc="+json.getString("gc"));
+				   }
+			   }else{
+				   Log.d(TAG, "json has not gc");
+			   }
+			   
+		   }
 		   
 		   if(json.has("sr"))
 			   result = processStatusReport(json.getJSONObject("sr"));
 		   return result;
 	   }
 	   
+	   
+	   private boolean checkPositions(){
+		   if(Math.abs(posx-bosx)<0.001&&Math.abs(posy-bosy)<0.001&&Math.abs(posz-bosz)<0.001) return true;
+		   else return false;
+	   }
+	   
+	   private boolean checkGC(String gcc){
+		   if(gc.equals(gcc)) return true;
+		   else return false;
+	   }
 	   
 	   private synchronized String processStatusReport(JSONObject sr) throws JSONException {
 		   Log.d(TAG, "processStatusReport called");
@@ -620,41 +694,49 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   } else {
 				   status = 0;
 			   }
+			   Log.d(TAG, "status = "+status);
 		   }
 		   
 		   
-		   /*
-		   JSONObject jResult = new JSONObject();
 		   if (sr.has("posx")){
 			   posx = sr.getDouble("posx");
-			   jResult.put("x", posx);
 		   }
 		   if (sr.has("posy")){
 			   posy = sr.getDouble("posy");
-			   jResult.put("y", posy);
 		   }
 		   if (sr.has("posz")){
 			   posz = sr.getDouble("posz");
-			   jResult.put("z", posz);
 		   }
+		   Log.d(TAG, "posx="+String.valueOf(posx)+", posy="+String.valueOf(posy)+", posz="+String.valueOf(posz));
+		   Log.d(TAG, "checkPs?"+checkPs);
+		   if(checkPs){
+			   if(checkPositions()){
+				   Log.d(TAG, "positions check out!");
+				   checkPs = false;
+				   lockdown = false;
+			   }else{
+				   Log.d(TAG, "positions don't check out");
+			   }
+		   }
+		   /*
 		   if (sr.has("posa")){
 			   double t_posa = sr.getDouble("posa");
 			   Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
 			   posa = t_posa*Math.PI*2.0*rosa/360.0;
 			   Log.d(TAG, "posa = "+String.valueOf(posa));
 			   if(abc==0){
-				   jResult.put("a", posa-a_diff);
+				   //jResult.put("a", posa-a_diff);
 			   }else if(abc==1){
-				   jResult.put("b", posa-b_diff);
+				   //jResult.put("b", posa-b_diff);
 			   }else if(abc==2){
-				   jResult.put("c", posa-c_diff);
+				   //jResult.put("c", posa-c_diff);
 			   }
-			   jResult.put("a", posa);
+			   //jResult.put("a", posa);
 			   Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
 			   Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
 			   Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
 		   }
-		   if (sr.has("stat")){
+		   /*if (sr.has("stat")){
 			   switch (sr.getInt("stat")){
 			   case 0:
 				   jResult.put("listening", 0);
@@ -709,7 +791,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   }*/
 	   
 	   public boolean commandSetup(JSONObject json){
-		   double time = 0.0;
+		   
+		   int time = 0;
 		   double aspirate = 0.0;
 		   int grip = 0;
 		   boolean blowout = false;
@@ -726,7 +809,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   }
 		   
 		   try{
-			   time = json.getJSONObject("trigger").getDouble("value");
+			   time = json.getJSONObject("trigger").getInt("value");
 		   }catch(Exception timex){
 		   }
 		   try{
@@ -743,20 +826,28 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   }catch(Exception bex){
 		   }   
 		   Log.d(TAG, "ingredient:"+ingredient);
-		   Log.d(TAG, "time:"+String.valueOf(time));
+		   Log.d(TAG, "time:"+time);
 		   Log.d(TAG, "aspirate:"+String.valueOf(aspirate));
 		   Log.d(TAG, "grip:"+String.valueOf(grip));
 		   Log.d(TAG, "blowout:"+String.valueOf(blowout));
 			   
 		   // 1. Create delay if any
-		   if(time>0.0){
-			   proceed = false;
-			   Delay del = new Delay(time*1000);
-			   Log.d(TAG, "starting delay...");
-			   del.run();
-		   }
+		   /*if(time>0){
+			   Log.d(TAG, "time>0, pee="+pee);
+			   setProceed(false);
+			   Delay del = new Delay();//time);
+			   Log.d(TAG, "starting delay... dHandler.postDelayed(del, time)");
+			   //del.run();
+			   dHandler.postDelayed(del, time);
+		   }*/
 		   
-		   while(!proceed){ /*NOOP*/ }
+		   //while(!proceed){ /*NOOP*/Thread.sleep(time); }
+		   try {
+				Thread.sleep(time);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		   Log.d(TAG, "proceeding");
 		   // 2. Create gcode commands for completing action
 		   String cmdStr;
@@ -768,13 +859,23 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   String ygo = String.valueOf(loco.y);
 		   Log.d(TAG, "ygo = " + ygo);
 		   idx++;
-		   cmdStr = "N" + idx + " g0X"+xgo+"Y"+ygo+"\n";
+		   cmdStr = "{\"gc\":\"N" + idx + "G0X"+xgo+"Y"+ygo+"\"}\n";
+		   Location loca = new Location();
+		   loca.x = Double.parseDouble(xgo);
+		   loca.y = Double.parseDouble(ygo);
+		   loca.z = bosz;
+		   lackattack.add(loca);
 		   whackattack.add(cmdStr);
 		   
 		   String zgo = String.valueOf(loco.z);
 		   Log.d(TAG, "zgo = " + zgo);
 		   idx++;
-		   cmdStr = "N" + idx + " g0Z"+zgo+"\n";
+		   cmdStr = "{\"gc\":\"N" + idx + "G0Z"+zgo+"\"}\n";
+		   Location locb = new Location();
+		   locb.x = loca.x;
+		   locb.y = loca.y;
+		   locb.z = Double.parseDouble(zgo);
+		   lackattack.add(locb);
 		   whackattack.add(cmdStr);
 		   
 		   String ago = "";
@@ -792,52 +893,93 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   default:
 				   break;
 		   }
+		   Location locc = new Location();
+		   locc.x = locb.x;
+		   locc.y = locb.y;
+		   locc.z = locb.z;
 		   if(!ago.equals("")){
 			   idx++;
-			   cmdStr = "N" + idx + "M5\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
+			   lackattack.add(locc);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "N" + idx + " g0A" + ago + "\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G0A" + ago + "\"}\n";
 			   whackattack.add(cmdStr);
+		   }else{
+			   
 		   }
+		   
+		   Location locd = new Location();
+		   locd.x = locc.x;
+		   locd.y = locc.y;
+		   locd.z = locc.z;
+		   Location loce = new Location();
+		   loce.x = locd.x;
+		   loce.y = locd.y;
+		   loce.z = locd.z;
 		   
 		   if(grip==0){
 			   idx++;
-			   cmdStr = "N" + idx + "M3\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "M3\"}\n";
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "N" + idx + " g0A"+String.valueOf(bopen)+"\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(bopen)+"\"}\n";
+			   lackattack.add(loce);
 			   whackattack.add(cmdStr);
 		   }else if(grip==1){
 			   idx++;
-			   cmdStr = "N" + idx + "M3\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "M3\"}\n";
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "N" + idx + " g0A"+String.valueOf(bclose)+"\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(bclose)+"\"}\n";
+			   lackattack.add(loce);
 			   whackattack.add(cmdStr);
 		   }
 		   
+		   
+		   
 		   if(blowout){
 			   idx++;
-			   cmdStr = "N" + idx + "M5\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
 			   whackattack.add(cmdStr);
 			   idx++;
-			   cmdStr = "N" + idx + " g0A"+String.valueOf(ablow)+"\n";
+			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(ablow)+"\"}\n";
 			   whackattack.add(cmdStr);
 		   }
 		   
 		   // Z return to 0 at end of job
+		   Location locf = new Location();
+		   locf.x = loce.x;
+		   locf.y = loce.y;
+		   locf.z = loce.z;
 		   idx++;
-		   cmdStr = "N" + idx + "g0Z0\n";
+		   cmdStr = "{\"gc\":\"N" + idx + "G0Z0\"}\n";
+		   lackattack.add(locf);
 		   whackattack.add(cmdStr);
 		   
 		   // 3. Add them to whackattack queue (throughout above)
+		   //try {
+			  //mApi.write("{\"sr\":\"\"}".getBytes());
+			   lockdown = false;
+		   //} catch (RemoteException e) {
+			   // TODO Auto-generated catch block
+		//	   e.printStackTrace();
+		   //}
 		   
 		   return true;
 	   }
 	   
 	   public void endSequence(){
 		   Log.d(TAG, "END SEQUENCE!!!");
+		   Location foca = new Location();
+		   Location focb = new Location();
+		   Location focc = new Location();
+		   foca.x = foca.y = foca.z = focb.x = focb.y = focb.z = focc.x = focc.y = focc.z = 0.0;
+		   lackattack.add(foca);
+		   lackattack.add(focb);
+		   lackattack.add(focc);
 		   whackfinish.add("{\"gc\":\"G0Z0\"}\n");
 		   whackfinish.add("{\"gc\":\"G0X0Y0\"}\n");
 		   whackfinish.add("{\"gc\":\"G0A0\"}\n");
@@ -845,22 +987,21 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   }
 	   
 	   private class Delay implements Runnable{
-		   int _delay=0;
-		   public Delay(double delay){
-			   _delay = (int)delay;
-			   Log.d(TAG, "_delay = "+String.valueOf(_delay));
-		   }
+		   /*int _delay=0;
+		   public Delay(int delay){
+			   _delay = delay;
+			   Log.d(TAG, "_delay = "+_delay);
+		   }*/
 			@Override
 			public void run() {
-				// TODO Auto-generated method stub
-				try {
+				/*try {
 					Thread.sleep(_delay);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				Log.d(TAG, "proceed = true");
-				proceed = true;
+				}*/
+				Log.d(TAG, "proceed = true, pee="+pee);
+				setProceed(true);
 			}
 		   
 	   }
