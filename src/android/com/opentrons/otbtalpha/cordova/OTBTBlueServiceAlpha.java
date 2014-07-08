@@ -1,5 +1,6 @@
 package com.opentrons.otbtalpha.cordova;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,6 +17,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -89,6 +91,10 @@ public class OTBTBlueServiceAlpha extends Service{
 			mAdapter = BluetoothAdapter.getDefaultAdapter();
 	        mState = STATE_NONE;
 		}
+		
+		File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
+	    storagePath.mkdirs();
+		
 		// Duplicating the call to initialiseService across onCreate and onStart
 		// Done this to ensure that my initialisation code is called.
 		// Found that the onStart was not called if Android was re-starting the service if killed
@@ -290,6 +296,14 @@ public class OTBTBlueServiceAlpha extends Service{
 	        
 	        setState(STATE_NONE);
 		}
+
+		@Override
+		public void resume() throws RemoteException {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		
 	};
 	
 	
