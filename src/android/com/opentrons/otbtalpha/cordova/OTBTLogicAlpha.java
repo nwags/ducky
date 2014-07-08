@@ -951,6 +951,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	
 	public ExecuteResult run(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
+		
+		if(args==null){
+			Log.d(TAG, "run failed");
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "null arg"));
+		}
 		try{
 			String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
 			
