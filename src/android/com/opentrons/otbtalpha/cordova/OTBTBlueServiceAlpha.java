@@ -93,7 +93,8 @@ public class OTBTBlueServiceAlpha extends Service{
 		}
 		
 		File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
-	    storagePath.mkdirs();
+	    if(!storagePath.exists())
+	    	storagePath.mkdirs();
 		
 		// Duplicating the call to initialiseService across onCreate and onStart
 		// Done this to ensure that my initialisation code is called.
