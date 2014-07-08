@@ -94,5 +94,30 @@ module.exports = {
     
     run: function (job, success, failure) {
     	cordova.exec(success, failure, "OTBTAlpha", "run", [job]);
+    },
+    
+    load: function (filename, success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "load", [filename]);
+    },
+    
+    save: function (name, job, success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "save", [name, job]);
+    },
+    
+    listfiles: function (success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "listfiles", []);
+    },
+    
+    pause: function (success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "pause", []);
+    },
+    
+    resume: function (success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "resume", []);
+    },
+    
+    kill: function (success, failure) {
+    	cordova.exec(success, failure, "OTBTAlpha", "kill", []);
     }
+    
 };
