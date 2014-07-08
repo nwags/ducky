@@ -862,10 +862,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   
 		   double d_pipette = (double)pipette;
 		   String ago = String.valueOf((aspirate/d_pipette)*16.0);
-		   if(Integer.parseInt(ago)>22)
-			   ago = "22";
-		   if(Integer.parseInt(ago)<0){
-			   ago = "0";
+		   
+		   if(Double.parseDouble(ago)>22.0)
+			   ago = "22.0";
+		   if(Double.parseDouble(ago)<0.0){
+			   ago = "0.0";
 		   }
 		   Location locc = new Location();
 		   locc.x = locb.x;
