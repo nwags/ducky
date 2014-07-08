@@ -992,7 +992,8 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			String name = args.getString(0);
 			
 			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
-		    storagePath.mkdirs();
+		    if(!storagePath.exists())
+		    	storagePath.mkdirs();
 		    File[] files = storagePath.listFiles();
 		    for(File file : files){
 		    	if(file.getName().equals(name)){
@@ -1026,12 +1027,16 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult save(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
-		    storagePath.mkdirs();
+			String sp = Environment.getExternalStorageDirectory().getPath() + "/OpenTrons";
+			File storagePath = new  File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
+		    if(!storagePath.exists())
+		    	storagePath.mkdirs();
 		    String name = args.getString(0);//json.getString("name");
 		    String job = args.getString(1);
 		    String fileString = storagePath+"/"+name+".json";
+		    Log.d(TAG, "trying to save here: "+fileString);
 		    File file = new File(fileString);
+		    file.createNewFile();
 		    FileOutputStream outputStream;
 		    try{
 			    PrintWriter writer = new PrintWriter(file);
@@ -1058,18 +1063,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		ExecuteResult result = null;
 		try{
 			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
-		    storagePath.mkdirs();
+		    if(!storagePath.exists())
+		    	storagePath.mkdirs();
 		    File[] files = storagePath.listFiles();
-		    StringBuilder sb = new StringBuilder();
-		    for(File file : files){
-		    	if(!file.isDirectory()&&file.getName().endsWith(".json")){
-		    		if(sb.length()>0)
-		    			sb.append(",");
-		    		sb.append(file.getName());
-		    	}
+		    if(files!=null){
+			    StringBuilder sb = new StringBuilder();
+			    for(File file : files){
+			    	if(!file.isDirectory()&&file.getName().endsWith(".json")){
+			    		if(sb.length()>0)
+			    			sb.append(",");
+			    		sb.append(file.getName());
+			    	}
+			    }
+			    ((CallbackContext)listenerExtras[0]).success(sb.toString());
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		    }
-		    ((CallbackContext)listenerExtras[0]).success(sb.toString());
-			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+		    Log.d(TAG, "listfiles failed");
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "no files"));
 		}catch(Exception ex){
 			Log.d(TAG, "listfiles failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
