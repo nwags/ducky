@@ -989,17 +989,20 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult load(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
+			String bases = Environment.getExternalStorageDirectory().getPath() + "/OpenTrons";
 			String name = args.getString(0);
-			
 			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
 		    if(!storagePath.exists())
 		    	storagePath.mkdirs();
 		    File[] files = storagePath.listFiles();
+		    Log.d(TAG, "FILE name = "+name);
+		    int i = 0;
 		    for(File file : files){
+		    	Log.d(TAG, "file["+(i++)+"] = "+file.getName());
 		    	if(file.getName().equals(name)){
 		    		try{
 		    			BufferedReader br = null;
-		    			br = new BufferedReader(new FileReader(file.getName()));
+		    			br = new BufferedReader(new FileReader(bases+"/"+file.getName()));
 		    			StringBuilder sb = new StringBuilder();
 		    			String line = "";
 		    			while((line=br.readLine())!=null){
@@ -1007,6 +1010,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		    			}
 		    			br.close();
 		    			JSONObject andy = new JSONObject(sb.toString());
+		    			Log.d(TAG, "andy = "+andy.toString());
 		    			((CallbackContext)listenerExtras[0]).success(andy);
 		    			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		    			return result;
