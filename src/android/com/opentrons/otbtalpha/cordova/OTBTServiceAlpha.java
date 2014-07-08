@@ -883,7 +883,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   lackattack.add(locc);
 		   whackattack.add(cmdStr);
 		   idx++;
-		   cmdStr = "{\"gc\":\"N" + idx + "G91G0A" + ago + "\"}\n";
+		   cmdStr = "{\"gc\":\"N" + idx + "G91G0A-" + ago + "\"}\n";
 		   GPS gpscb = new GPS();
 		   gpscb.current = gpsca.current;
 		   gpscb.ingrate = gpsca.ingrate;
