@@ -178,7 +178,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 					}else{
 						try {
 							if(!boomthreading){
-								Log.d(TAG, "if(!boomthreading)...");
+								Log.d(TAG, "if(!boomthreading)...1");
 								final BoomThread boomer = new BoomThread(job);
 								
 								new AsyncTask<Void, Void, Void>() {
@@ -186,11 +186,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 									@Override
 									protected Void doInBackground(
 											Void... params) {
-										try{
-											Thread.sleep(1000);
-										}catch(Exception e){
-											e.printStackTrace();
-										}
+										//try{
+										//	Thread.sleep(1000);
+										//}catch(Exception e){
+										//	e.printStackTrace();
+										//}
+										Log.d(TAG, "boomer.run() 2");
 										boomer.run();
 										return null;
 									}
@@ -366,6 +367,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			// TODO Auto-generated method stub
 			mApi.write("!%".getBytes());
 			kill = true;
+			oscCalled = false;
 		}
 
 		@Override
@@ -510,6 +512,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 				   hIngredients.put(loco.ingredient, loco);
 			   }
 		   }catch(Exception ex){
+			   Log.d(TAG, "something went terribly wrong");
 			   ex.printStackTrace();
 		   }
 	   }
@@ -582,6 +585,10 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	            }
 			   //Log.d(TAG, "status = "+status);
 			   if(status==3){
+				   if(kill){
+					   kill = false;
+					   endSequence();
+				   }
 				   if(!lockdown||checkPs){//||checkGCs){
 					   lockdown = true;
 					   if(whackattack.size()>0) {
@@ -607,8 +614,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 							   checkGCs = true;
 							   Log.d(TAG, "checkGCs! gc=round="+gc);
 							   while(paused){	/* NOOP */	}	
-							   if(kill){ endSequence(); }
-							   else{ mApi.write(round.getBytes()); }
+							   mApi.write(round.getBytes());
 						   } catch (InterruptedException e) {
 							   // TODO Auto-generated catch block
 							   e.printStackTrace();
@@ -659,6 +665,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 											e.printStackTrace();
 										}
 									} else {
+										Log.d(TAG, "running and oscCalled -> false");
 										running = false;
 										oscCalled = false;
 									}
@@ -1027,6 +1034,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   whackfinish.add("{\"gc\":\"G0A0\"}\n");
 		   endo = true;
 		   rowcount = 0;
+		   kill = false;
 	   }
 	   
 	   private class Delay implements Runnable{
@@ -1185,11 +1193,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 						@Override
 						protected Void doInBackground(
 								Void... params) {
-							try{
-								Thread.sleep(1000);
-							}catch(Exception e){
-								e.printStackTrace();
-							}
+							//try{
+							//	Thread.sleep(1000);
+							//}catch(Exception e){
+							//	e.printStackTrace();
+							//}
+							Log.d(TAG, "boom.run() 1");
 							boomer.run();
 							return null;
 						}
