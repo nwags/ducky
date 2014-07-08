@@ -15,6 +15,8 @@ interface OTBTApiAlpha {
 	
 	void pause();
 	
+	void resume();
+	
 	void kill();
 	
 	void write(inout byte[] data);
