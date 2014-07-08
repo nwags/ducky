@@ -132,7 +132,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public static final String blueName = OTBTBlueServiceAlpha.class.getName();
 	public static final String redName = OTBTServiceAlpha.class.getName();
 	public static ServiceDetails blueService;
-	public boolean testee = false;
+	//public boolean testee = false;
 	/*
 	 ************************************************************************************************
 	 * Fields 
@@ -752,7 +752,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    	}
 	    	
 	    	String gogoStr = "";
-	    	String gocode = "{\"gc\":\"g90 g0 ";//\"}\n";
+	    	String gocode = "{\"gc\":\"G90G0";//\"}\n";
 	    	if(json.has("x")||json.has("X")) {
 	    		Log.d(TAG, "has x");
 	    		Log.d(TAG, "and x="+json.getDouble("x"));
@@ -774,23 +774,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    	}
 	    	if(json.has("a")) {
 	    		abc=0;
-	    		blueService.write("m5\n".getBytes());
+	    		blueService.write("{\"gc\":\"M5\"}\n".getBytes());
 	    		double goa = json.getDouble("a");//*amax;
-	    		if(testee){
+	    		/*if(testee){
 	    			testee=false;
 	    			goa=0.0;
 	    		}else{
 	    			testee=true;
 	    			goa=10.0;
-	    		}
+	    		}*/
 	    		goa-=a_diff;
 	    		b_diff+=(goa-b_diff);
 	    		c_diff+=(goa-c_diff);
-	    		gogoStr = "a-"+String.valueOf(goa);
+	    		gogoStr = "a"+String.valueOf(goa);
 	    		gocode+=gogoStr;
 	    	}else if(json.has("b")){
 	    		abc=1;
-	    		blueService.write("m3\n".getBytes());
+	    		blueService.write("{\"gc\":\"M3\"}\n".getBytes());
 	    		double gob = json.getDouble("b");
 	    		gob-=b_diff;
 	    		a_diff+=(gob-a_diff);
@@ -800,7 +800,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		gocode+=gogoStr;
 	    	}else if(json.has("c")){
 	    		abc=2;
-	    		blueService.write("m4\n".getBytes());
+	    		blueService.write("{\"gc\":\"M4\"}\n".getBytes());
 	    		double goc = json.getDouble("c");
 	    		goc-=c_diff;
 	    		a_diff+=(goc-a_diff);
@@ -870,7 +870,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult home(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			blueService.write("{\"gc\":\"G28.2X0Y0Z0\"}\n".getBytes());
+			blueService.write("{\"gc\":\"G28.2X0Y0Z0A0\"}\n".getBytes());
 	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
