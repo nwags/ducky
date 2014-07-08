@@ -523,7 +523,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   if(mApi==null){
 				   Log.d(TAG, "mApi is null, uh oh");
 			   }
-			   gc = "G90G0X0Y0Z0A0";
+			   gc = "G90G0X0Y0Z0A"+String.valueOf(ablow);
 			   String cmd = "{\"gc\":\""+gc+"\"}\n";
 			   mApi.write(cmd.getBytes());
 			   mApi.write("{\"sr\":\"\"}\n".getBytes());
