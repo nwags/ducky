@@ -588,6 +588,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 						   try {
 							   String round = whackattack.take();
 							   Location tug = lackattack.take();
+							   GPS where = gpsattack.take();
+							   Bundle b = new Bundle();
+							   b.putInt("what", 6);
+							   b.putDouble("current", where.p_current);
+							   b.putDouble("total", where.p_total);
+							   bundleAll(b);
 							   bosx = tug.x;
 							   bosy = tug.y;
 							   bosz = tug.z;
@@ -833,7 +839,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   gpsa.current = rowcount;
 		   gpsa.ingrate = ingredient;
 		   gpsa.p_current = 0.0;
-		   gpsa.p_total = gpsa.p_current/(double)total + (double)rowcount/(double)total;
+		   gpsa.p_total = gpsa.p_current/(double)total + ((double)rowcount-1)/(double)total;
 		   gpsattack.add(gpsa);
 		   
 		   String zgo = String.valueOf(loco.z);
@@ -850,7 +856,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   gpsb.current = gpsa.current;
 		   gpsb.ingrate = gpsa.ingrate;
 		   gpsb.p_current = 0.1666;
-		   gpsb.p_total = gpsb.p_current/(double)total + (double)rowcount/(double)total;
+		   gpsb.p_total = gpsb.p_current/(double)total + ((double)rowcount-1)/(double)total;
 		   gpsattack.add(gpsb);
 		   
 		   
@@ -867,13 +873,19 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   GPS gpsca = new GPS();
 		   gpsca.current = gpsca.current;
 		   gpsca.ingrate = gpsca.ingrate;
-		   gpsca.p_current = 0.3333;
-		   gpsca.p_total = gpsca.p_current/(double)total + (double)rowcount/(double)total;
-		   
+		   gpsca.p_current = 0.25;
+		   gpsca.p_total = gpsca.p_current/(double)total + ((double)rowcount-1)/(double)total;
+		   gpsattack.add(gpsca);
 		   lackattack.add(locc);
 		   whackattack.add(cmdStr);
 		   idx++;
 		   cmdStr = "{\"gc\":\"N" + idx + "G91G0A" + ago + "\"}\n";
+		   GPS gpscb = new GPS();
+		   gpscb.current = gpsca.current;
+		   gpscb.ingrate = gpsca.ingrate;
+		   gpscb.p_current = 0.3333;
+		   gpscb.p_total = gpscb.p_current/(double)total + ((double)rowcount-1)/(double)total;
+		   gpsattack.add(gpscb);
 		   lackattack.add(locc);
 		   whackattack.add(cmdStr);
 		   
@@ -913,21 +925,56 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   if(blowout){
 			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
+			   GPS gpsda = new GPS();
+			   gpsda.current = gpsda.current;
+			   gpsda.ingrate = gpsda.ingrate;
+			   gpsda.p_current = 0.4166;
+			   gpsda.p_total = gpsda.p_current/(double)total + ((double)rowcount-1)/(double)total;
+			   gpsattack.add(gpsda);
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
+			   GPS gpsdb = new GPS();
+			   gpsdb.current = gpsdb.current;
+			   gpsdb.ingrate = gpsdb.ingrate;
+			   gpsdb.p_current = 0.5;
+			   gpsdb.p_total = gpsdb.p_current/(double)total + ((double)rowcount-1)/(double)total;
+			   gpsattack.add(gpsdb);
 			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(ablow)+"\"}\n";
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 		   }
 		   
 		   if(droptip){
 			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
+			   GPS gpsea = new GPS();
+			   gpsea.current = gpsea.current;
+			   gpsea.ingrate = gpsea.ingrate;
+			   gpsea.p_current = 0.5555;
+			   gpsea.p_total = gpsea.p_current/(double)total + ((double)rowcount-1)/(double)total;
+			   gpsattack.add(gpsea);
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(dtip)+"\"}\n";
+			   GPS gpseb = new GPS();
+			   gpseb.current = gpseb.current;
+			   gpseb.ingrate = gpseb.ingrate;
+			   gpseb.p_current = 0.6111;
+			   gpseb.p_total = gpseb.p_current/(double)total + ((double)rowcount-1)/(double)total;
+			   gpsattack.add(gpseb);
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "G0A"+String.valueOf(ablow)+"\"}\n";
+			   GPS gpsec = new GPS();
+			   gpsec.current = gpsec.current;
+			   gpsec.ingrate = gpsec.ingrate;
+			   gpsec.p_current = 0.6666;
+			   gpsec.p_total = gpsec.p_current/(double)total + ((double)rowcount-1)/(double)total;
+			   gpsattack.add(gpsec);
+			   lackattack.add(locd);
 			   whackattack.add(cmdStr);
 			   idx++;
 			   
@@ -940,6 +987,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   locf.z = loce.z;
 		   idx++;
 		   cmdStr = "{\"gc\":\"N" + idx + "G90G0Z0\"}\n";
+		   GPS gpsf = new GPS();
+		   gpsf.current = gpsf.current;
+		   gpsf.ingrate = gpsf.ingrate;
+		   gpsf.p_current = 0.8333;
+		   gpsf.p_total = gpsf.p_current/(double)total + ((double)rowcount-1)/(double)total;
+		   gpsattack.add(gpsf);
 		   lackattack.add(locf);
 		   whackattack.add(cmdStr);
 		   
