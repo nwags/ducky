@@ -845,7 +845,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   json.getJSONObject("action").get("blowout");
 			   blowout = true;
 		   }catch(Exception bex){
-		   }   
+		   }
+		   try{
+			   json.getJSONObject("action").get("droptip");
+			   droptip = true;
+		   }catch(Exception tex){
+			   
+		   }
 		   Log.d(TAG, "ingredient:"+ingredient);
 		   Log.d(TAG, "time:"+time);
 		   Log.d(TAG, "aspirate:"+String.valueOf(aspirate));
