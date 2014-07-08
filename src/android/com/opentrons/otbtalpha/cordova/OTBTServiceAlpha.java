@@ -54,6 +54,9 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
     
     public static OTBTAlpha pug;
     
+    public static boolean kill = false;
+    public static boolean paused = false;
+    
 	public static boolean oscCalled = false;
     StringBuffer buffer = new StringBuffer();
     
@@ -354,13 +357,15 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		@Override
 		public void pause() throws RemoteException {
 			// TODO Auto-generated method stub
-			
+			paused = true;
+			mApi.write("!".getBytes());
 		}
 
 		@Override
 		public void kill() throws RemoteException {
 			// TODO Auto-generated method stub
-			
+			mApi.write("!%".getBytes());
+			kill = true;
 		}
 
 		@Override
@@ -387,6 +392,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		public void disconnect() throws RemoteException {
 			// NOOP
 			
+		}
+
+		@Override
+		public void resume() throws RemoteException {
+			mApi.write("~".getBytes());
+			paused = true;
 		}
 	};
 
@@ -434,6 +445,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private BlockingQueue<String> whackattack = new LinkedBlockingQueue<String>();
 	   private BlockingQueue<Location>lackattack = new LinkedBlockingQueue<Location>();
 	   private BlockingQueue<String> whackfinish = new LinkedBlockingQueue<String>();
+	   private BlockingQueue<GPS>gpsattack = new LinkedBlockingQueue<GPS>();
 	   private HashMap<String, Location> hIngredients = new HashMap<String, Location>();
 	   private int pipette;
 	   private int idx = 0;
@@ -458,7 +470,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private int current = 0;
 	   private double pct_total = 0.0;
 	   private double pct_current = 0.0;
-	   
+	   int rowcount = 0;
 	   
 	   public BoomThread(JSONObject job) {
 		   mJob = job;
@@ -469,7 +481,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   Log.d(TAG, "mProtocol = " + mProtocol.toString());
 			   
 		   } catch (JSONException e2) {
-			   // TODO Auto-generated catch block
 			   e2.printStackTrace();
 		   }
 		   
@@ -477,7 +488,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   pipette = job.getInt("pipette");
 			   Log.d(TAG, "pipette = "+String.valueOf(pipette));
 		   } catch (JSONException e1) {
-			   // TODO Auto-generated catch block
 			    e1.printStackTrace();
 		   }
 		   try {
@@ -506,7 +516,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   
 	   @Override
 	   public void run() {
-		   // TODO Auto-generated method stub
 		   Log.d(TAG, "run() called");
 		   //boomerang();
 		   Log.d(TAG, "trying to whack some bytes");
@@ -534,7 +543,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   		buffer.setLength(0);
 					listener.shutMeDown();
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 		   }
@@ -563,7 +571,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		                //result.setKeepCallback(true);
 		                //dataAvailableCallback.sendPluginResult(result);
 		    			if(mMessage!=null&&!mMessage.equals("")) {
-		    				// TODO: SEND MESSAGE(JSON) BACK TO UI
+		    				// TODO: SEND MESSAGE(JSON) BACK TO UI or not...
 		    			}
 		    		} catch(Exception e) {
 		    			if(e.getMessage()!=null)
@@ -592,7 +600,9 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 								}
 							   checkGCs = true;
 							   Log.d(TAG, "checkGCs! gc=round="+gc);
-							   mApi.write(round.getBytes());
+							   while(paused){	/* NOOP */	}	
+							   if(kill){ endSequence(); }
+							   else{ mApi.write(round.getBytes()); }
 						   } catch (InterruptedException e) {
 							   // TODO Auto-generated catch block
 							   e.printStackTrace();
@@ -612,6 +622,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 								} catch (JSONException e) {
 									e.printStackTrace();
 								}
+								rowcount++;
 								commandSetup(jsahn);
 							} else {
 								if(!endo) {
@@ -634,6 +645,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 											}
 											checkGCs = true;
 											Log.d(TAG, "checkGCs! gc=finisher="+gc);
+											while(paused){	/* NOOP	*/	}
 											mApi.write(finisher.getBytes());
 										} catch (InterruptedException e1) {
 											e1.printStackTrace();
@@ -738,77 +750,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 				   Log.d(TAG, "positions don't check out");
 			   }
 		   }
-		   /*
-		   if (sr.has("posa")){
-			   double t_posa = sr.getDouble("posa");
-			   Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
-			   posa = t_posa*Math.PI*2.0*rosa/360.0;
-			   Log.d(TAG, "posa = "+String.valueOf(posa));
-			   if(abc==0){
-				   //jResult.put("a", posa-a_diff);
-			   }else if(abc==1){
-				   //jResult.put("b", posa-b_diff);
-			   }else if(abc==2){
-				   //jResult.put("c", posa-c_diff);
-			   }
-			   //jResult.put("a", posa);
-			   Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
-			   Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
-			   Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
-		   }
-		   /*if (sr.has("stat")){
-			   switch (sr.getInt("stat")){
-			   case 0:
-				   jResult.put("listening", 0);
-				   break;
-			   case 1:
-				   jResult.put("listening", 1);
-				   break;
-			   case 2:
-				   jResult.put("listening", 0);
-				   break;
-			   case 3:
-				   jResult.put("listening", 1);
-				   break;
-			   case 4:
-				   jResult.put("listening", 0);
-				   break;
-			   case 5:
-				   jResult.put("listening", 0);
-				   break;
-			   case 6:
-				   jResult.put("listening", 0);
-				   break;
-			   case 7:
-				   jResult.put("listening", 0);
-				   break;
-			   case 8:
-				   jResult.put("listening", 0);
-				   break;
-			   case 9:
-				   jResult.put("listening", 0);
-				   break;
-			   }
-		   }
-		   result = jResult.toString();
-		   LOG.d(TAG, "result: "+result);
-		   
-		   */
 		   
 		   
 		   
 		   return result;
 	   }
-	   
-	   /*private class throwB implements Runnable{
-
-		@Override
-		public void run() {
-			// TODO Auto-generated method stub
-			boomerang();
-		}
-		   
-	   }*/
 	   
 	   public boolean commandSetup(JSONObject json){
 		   
@@ -857,18 +803,8 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   Log.d(TAG, "aspirate:"+String.valueOf(aspirate));
 		   Log.d(TAG, "grip:"+String.valueOf(grip));
 		   Log.d(TAG, "blowout:"+String.valueOf(blowout));
-			   
-		   // 1. Create delay if any
-		   /*if(time>0){
-			   Log.d(TAG, "time>0, pee="+pee);
-			   setProceed(false);
-			   Delay del = new Delay();//time);
-			   Log.d(TAG, "starting delay... dHandler.postDelayed(del, time)");
-			   //del.run();
-			   dHandler.postDelayed(del, time);
-		   }*/
 		   
-		   //while(!proceed){ /*NOOP*/Thread.sleep(time); }
+		   
 		   try {
 				Thread.sleep(time);
 			} catch (InterruptedException e) {
@@ -893,6 +829,12 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   loca.z = bosz;
 		   lackattack.add(loca);
 		   whackattack.add(cmdStr);
+		   GPS gpsa = new GPS();
+		   gpsa.current = rowcount;
+		   gpsa.ingrate = ingredient;
+		   gpsa.p_current = 0.0;
+		   gpsa.p_total = gpsa.p_current/(double)total + (double)rowcount/(double)total;
+		   gpsattack.add(gpsa);
 		   
 		   String zgo = String.valueOf(loco.z);
 		   Log.d(TAG, "zgo = " + zgo);
@@ -904,6 +846,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   locb.z = Double.parseDouble(zgo);
 		   lackattack.add(locb);
 		   whackattack.add(cmdStr);
+		   GPS gpsb = new GPS();
+		   gpsb.current = gpsa.current;
+		   gpsb.ingrate = gpsa.ingrate;
+		   gpsb.p_current = 0.1666;
+		   gpsb.p_total = gpsb.p_current/(double)total + (double)rowcount/(double)total;
+		   gpsattack.add(gpsb);
+		   
 		   
 		   double d_pipette = (double)pipette;
 		   String ago = String.valueOf((aspirate/d_pipette)*16.0);
@@ -912,17 +861,22 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   locc.x = locb.x;
 		   locc.y = locb.y;
 		   locc.z = locb.z;
-		   if(!ago.equals("")){
-			   idx++;
-			   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
-			   lackattack.add(locc);
-			   whackattack.add(cmdStr);
-			   idx++;
-			   cmdStr = "{\"gc\":\"N" + idx + "G91G0A-" + ago + "\"}\n";
-			   whackattack.add(cmdStr);
-		   }else{
-			   
-		   }
+		   
+		   idx++;
+		   cmdStr = "{\"gc\":\"N" + idx + "M5\"}\n";
+		   GPS gpsca = new GPS();
+		   gpsca.current = gpsca.current;
+		   gpsca.ingrate = gpsca.ingrate;
+		   gpsca.p_current = 0.3333;
+		   gpsca.p_total = gpsca.p_current/(double)total + (double)rowcount/(double)total;
+		   
+		   lackattack.add(locc);
+		   whackattack.add(cmdStr);
+		   idx++;
+		   cmdStr = "{\"gc\":\"N" + idx + "G91G0A-" + ago + "\"}\n";
+		   lackattack.add(locc);
+		   whackattack.add(cmdStr);
+		   
 		   
 		   Location locd = new Location();
 		   locd.x = locc.x;
@@ -933,6 +887,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   loce.y = locd.y;
 		   loce.z = locd.z;
 		   
+		   /*
 		   if(grip==0){
 			   idx++;
 			   cmdStr = "{\"gc\":\"N" + idx + "M3\"}\n";
@@ -951,7 +906,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   cmdStr = "{\"gc\":\"N" + idx + "G90G0A"+String.valueOf(bclose)+"\"}\n";
 			   lackattack.add(loce);
 			   whackattack.add(cmdStr);
-		   }
+		   }*/
 		   
 		   
 		   
@@ -1013,6 +968,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   whackfinish.add("{\"gc\":\"G0X0Y0\"}\n");
 		   whackfinish.add("{\"gc\":\"G0A0\"}\n");
 		   endo = true;
+		   rowcount = 0;
 	   }
 	   
 	   private class Delay implements Runnable{
@@ -1045,6 +1001,15 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   
 	   }	
 	   
+   }
+   
+   private class GPS{
+	   public double p_total, p_current;
+	   public String ingrate;
+	   public int current;
+	   GPS(){
+		   
+	   }
    }
    
    private OTBTListenerAlpha.Stub serviceListener = new OTBTListenerAlpha.Stub() {
