@@ -1,5 +1,10 @@
 package com.opentrons.otbtalpha.cordova;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Set;
@@ -20,7 +25,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -94,6 +101,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
     public static final String ACTION_GET_DIMENSIONS = "getDimensions";
     public static final String ACTION_HOME = "home";
     public static final String ACTION_RUN = "run";
+    public static final String ACTION_LOAD = "load";
+    public static final String ACTION_SAVE = "save";
+    public static final String ACTION_LIST_FILES = "listfiles";
+    public static final String ACTION_STOP = "stop";
+    public static final String ACTION_PAUSE = "pause";
+    public static final String ACTION_RESUME = "resume";
+    public static final String ACTION_KILL = "kill";
     
     
 	// Error codes
@@ -228,7 +242,14 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    if( ACTION_GET_DIMENSIONS.equals(action)) result = true;
 	    if( ACTION_HOME.equals(action)) result = true;
 	    if( ACTION_RUN.equals(action)) result = true;
-		
+	    if( ACTION_LOAD.equals(action)) result = true;
+	    if( ACTION_SAVE.equals(action)) result = true;
+	    if( ACTION_LIST_FILES.equals(action)) result = true;
+	    if( ACTION_STOP.equals(action)) result = true;
+		if( ACTION_PAUSE.equals(action)) result = true;
+		if( ACTION_RESUME.equals(action)) result = true;
+		if( ACTION_KILL.equals(action)) result = true;
+	    
 	    return result;
 	}
 	
@@ -340,7 +361,37 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				
 				result = run(args, listener, listenerExtras);
 				
+			} else if(ACTION_LOAD.equals(action)){
+				
+				result = load(args, listener, listenerExtras);
+				
+			} else if(ACTION_SAVE.equals(action)){
+				
+				result = save(args, listener, listenerExtras);
+				
+			} else if(ACTION_LIST_FILES.equals(action)){
+				
+				result = listfiles(args, listener, listenerExtras);
+				
+			} else if(ACTION_STOP.equals(action)){
+				
+				result = stop(args, listener, listenerExtras);
+				
+			} else if(ACTION_PAUSE.equals(action)){
+				
+				result = pause(args, listener, listenerExtras);
+				
+			} else if(ACTION_RESUME.equals(action)){
+				
+				result = resume(args, listener, listenerExtras);
+				
+			} else if(ACTION_KILL.equals(action)){
+				
+				result = kill(args, listener, listenerExtras);
+				
 			}
+			
+			
 			
 			
 			
@@ -842,6 +893,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    	if(jsonObj.has("amax")) {
 	    		amax = jsonObj.getDouble("amax");
 	    	}
+	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
 			Log.d(TAG, "setdimensions failed", ex);
@@ -870,7 +922,24 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult home(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			blueService.write("{\"gc\":\"G28.2X0Y0Z0A0\"}\n".getBytes());
+			byte[] rst = {0x18};
+			blueService.write(rst);
+			final HomeStarRunner homey = new HomeStarRunner();
+			new AsyncTask<Void, Void, Void>() {
+
+				@Override
+				protected Void doInBackground(
+						Void... params) {
+					try{
+						Thread.sleep(4000);
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+					homey.run();
+					return null;
+				}
+				
+			}.execute();
 	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
@@ -907,6 +976,145 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 		}catch(Exception ex){
 			Log.d(TAG, "run failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult load(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			String name = args.getString(0);
+			
+			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
+		    storagePath.mkdirs();
+		    File[] files = storagePath.listFiles();
+		    for(File file : files){
+		    	if(file.getName().equals(name)){
+		    		try{
+		    			BufferedReader br = null;
+		    			br = new BufferedReader(new FileReader(file.getName()));
+		    			StringBuilder sb = new StringBuilder();
+		    			String line = "";
+		    			while((line=br.readLine())!=null){
+		    				sb.append(line);
+		    			}
+		    			br.close();
+		    			JSONObject andy = new JSONObject(sb.toString());
+		    			((CallbackContext)listenerExtras[0]).success(andy);
+		    			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+		    			return result;
+		    		}catch(Exception exx){
+		    			Log.d(TAG, "load failed", exx);
+		    			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, exx.getMessage()));
+		    		}
+		    	}
+		    }
+		    result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "filename not found" ));
+		}catch(Exception ex){
+			Log.d(TAG, "load failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult save(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
+		    storagePath.mkdirs();
+		    String name = args.getString(0);//json.getString("name");
+		    String job = args.getString(1);
+		    String fileString = storagePath+"/"+name+".json";
+		    File file = new File(fileString);
+		    FileOutputStream outputStream;
+		    try{
+			    PrintWriter writer = new PrintWriter(file);
+			    writer.print("");
+			    writer.close();
+			    
+			    outputStream = new FileOutputStream(file, false);
+			    outputStream.write(job.getBytes());
+			    outputStream.close();
+		    }catch(Exception e){
+		    	e.printStackTrace();
+		    }
+		    ((CallbackContext)listenerExtras[0]).success();
+			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			
+		}catch(Exception ex){
+			Log.d(TAG, "save", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult listfiles(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
+		    storagePath.mkdirs();
+		    File[] files = storagePath.listFiles();
+		    StringBuilder sb = new StringBuilder();
+		    for(File file : files){
+		    	if(!file.isDirectory()&&file.getName().endsWith(".json")){
+		    		if(sb.length()>0)
+		    			sb.append(",");
+		    		sb.append(file.getName());
+		    	}
+		    }
+		    ((CallbackContext)listenerExtras[0]).success(sb.toString());
+			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+		}catch(Exception ex){
+			Log.d(TAG, "listfiles failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	
+	
+	public ExecuteResult stop(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			blueService.write("!%".getBytes());
+			((CallbackContext)listenerExtras[0]).success();
+			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+		}catch(Exception ex){
+			Log.d(TAG, "stop failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult pause(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			
+		}catch(Exception ex){
+			Log.d(TAG, "pause failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult resume(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			
+		}catch(Exception ex){
+			Log.d(TAG, "resume failed", ex);
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+		}
+		return result;
+	}
+	
+	public ExecuteResult kill(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+		ExecuteResult result = null;
+		try{
+			
+		}catch(Exception ex){
+			Log.d(TAG, "kill failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 		}
 		return result;
@@ -1797,7 +2005,15 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		
 	}
 	
-	
+	private class HomeStarRunner implements Runnable{
+
+		@Override
+		public void run() {
+			blueService.write("{\"gc\":\"M5\"}\n".getBytes());
+			blueService.write("{\"gc\":\"G28.2X0Y0Z0A0\"}\n".getBytes());
+		}
+		
+	}
 	
 }
 
