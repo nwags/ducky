@@ -1109,7 +1109,33 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult pause(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			
+			try{
+				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
+				
+				Log.d(TAG, "Finding servicename " + serviceName);
+				
+				ServiceDetails service = null;
+				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
+				
+				if(this.mServices.containsKey(serviceName)) {
+					Log.d(TAG, "Found existing ServiceDetails");
+					service = this.mServices.get(serviceName);
+				} else {
+					Log.d(TAG, "Creating new ServiceDetails");
+					service = new ServiceDetails(this.mContext, serviceName);
+					this.mServices.put(serviceName, service);
+				}
+				
+				if(!service.isInitialised())
+					service.initialise();
+				
+				service.pause(args, listener, listenerExtras);
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+				
+			}catch(Exception ex){
+				Log.d(TAG, "run failed", ex);
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
 		}catch(Exception ex){
 			Log.d(TAG, "pause failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1120,7 +1146,33 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult resume(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			
+			try{
+				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
+				
+				Log.d(TAG, "Finding servicename " + serviceName);
+				
+				ServiceDetails service = null;
+				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
+				
+				if(this.mServices.containsKey(serviceName)) {
+					Log.d(TAG, "Found existing ServiceDetails");
+					service = this.mServices.get(serviceName);
+				} else {
+					Log.d(TAG, "Creating new ServiceDetails");
+					service = new ServiceDetails(this.mContext, serviceName);
+					this.mServices.put(serviceName, service);
+				}
+				
+				if(!service.isInitialised())
+					service.initialise();
+				
+				service.resume(args, listener, listenerExtras);
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+				
+			}catch(Exception ex){
+				Log.d(TAG, "run failed", ex);
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
 		}catch(Exception ex){
 			Log.d(TAG, "resume failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1131,7 +1183,33 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public ExecuteResult kill(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
-			
+			try{
+				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
+				
+				Log.d(TAG, "Finding servicename " + serviceName);
+				
+				ServiceDetails service = null;
+				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
+				
+				if(this.mServices.containsKey(serviceName)) {
+					Log.d(TAG, "Found existing ServiceDetails");
+					service = this.mServices.get(serviceName);
+				} else {
+					Log.d(TAG, "Creating new ServiceDetails");
+					service = new ServiceDetails(this.mContext, serviceName);
+					this.mServices.put(serviceName, service);
+				}
+				
+				if(!service.isInitialised())
+					service.initialise();
+				
+				service.kill(args, listener, listenerExtras);
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+				
+			}catch(Exception ex){
+				Log.d(TAG, "run failed", ex);
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
 		}catch(Exception ex){
 			Log.d(TAG, "kill failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1326,7 +1404,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					
 					result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 				} else {
-					Log.d(LOCALTAG, "currently Booming");
+					Log.d(LOCALTAG, "already Booming");
 					result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 				}
 			} catch (Exception ex) {
@@ -1337,6 +1415,50 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			Log.d(LOCALTAG, "Finished startBooming");
 			return result;
 		}
+		
+		public ExecuteResult pause(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+			Log.d(LOCALTAG, "starting pause");
+			ExecuteResult result = null;
+			try {
+				mApi.pause();
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
+		
+		public ExecuteResult resume(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+			Log.d(LOCALTAG, "starting resume");
+			ExecuteResult result = null;
+			try {
+				mApi.resume();
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
+		
+		public ExecuteResult kill(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
+			Log.d(LOCALTAG, "starting kill");
+			ExecuteResult result = null;
+			try {
+				mApi.kill();
+				currentlyBooming = false;
+				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
+			} catch (RemoteException ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
+			}
+			return result;
+		}
+		
 		
 		public ExecuteResult write(byte[] msg) {
 			Log.d(LOCALTAG, "starting write(byte[] msg)");
