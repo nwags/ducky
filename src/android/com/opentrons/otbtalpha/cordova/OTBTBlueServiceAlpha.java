@@ -25,14 +25,14 @@ import android.util.Log;
 public class OTBTBlueServiceAlpha extends Service{
 	public static final String TAG = OTBTBlueServiceAlpha.class.getSimpleName();
 	private static final boolean D = true;
-	
+
 	// Message types sent from the BluetoothSerialService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
-	
+
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
@@ -41,11 +41,10 @@ public class OTBTBlueServiceAlpha extends Service{
     
 	private boolean mServiceInitialised = false;
 	private List<OTBTListenerAlpha> mListeners = new ArrayList<OTBTListenerAlpha>();
-	
 	private final Object mResultLock = new Object();
 	private JSONObject mLatestResult = null;
-	
-	
+
+
 	// Well known SPP UUID
     private static final UUID UUID_SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -54,43 +53,35 @@ public class OTBTBlueServiceAlpha extends Service{
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
     private int mState;
-	
+
  // Constants that indicate the current connection state
     public static final int STATE_NONE = 0;       // we're doing nothing
     public static final int STATE_LISTEN = 1;     // now listening for incoming connections
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
 
-	
-	
-	
+
+
+
 	protected JSONObject getLatestResult() {
 		synchronized (mResultLock) {
 			return mLatestResult;
 		}
 	}
-	
+
 	protected void setLatestResult(JSONObject value) {
 		synchronized (mResultLock) {
 			this.mLatestResult = value;
 		}
 	}
-	
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		// TODO Auto-generated method stub
 		Log.i(TAG, "onBind called");
 		return apiEndpoint;
 	}
-	
-	@Override
-	public boolean onUnbind(Intent intent) {
-		Log.i(TAG, "onUnbind called");
-		boolean result = false;
-		
-		return result;
-	}
-	
+
 	@Override  
 	public void onCreate() {
 		super.onCreate(); 
@@ -100,55 +91,55 @@ public class OTBTBlueServiceAlpha extends Service{
 			mAdapter = BluetoothAdapter.getDefaultAdapter();
 	        mState = STATE_NONE;
 		}
-		
+
 		File storagePath = new File(Environment.getExternalStorageDirectory().getPath() + "/OpenTrons");
 	    if(!storagePath.exists())
 	    	storagePath.mkdirs();
-		
+
 		// Duplicating the call to initialiseService across onCreate and onStart
 		// Done this to ensure that my initialisation code is called.
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 	}
-	
+
 	@Override
 	public void onStart(Intent intent, int startId) {
 		Log.i(TAG, "Service started");       
-		
+
 		// Duplicating the call to initialiseService across onCreate and onStart
 		// Done this to ensure that my initialisation code is called.
 		// Found that the onStart was not called if Android was re-starting the service if killed
 		initialiseService();
 		//args = intent.getStringExtra("args");
 		//address = intent.getStringExtra("address");
-		
-		
+
+
 	}
 
 	@Override  
 	public void onDestroy() {     
 		super.onDestroy();     
 		Log.i(TAG, "Service destroying");
-		
+
 		if (mConnectThread != null) {mConnectThread.cancel(); mConnectThread = null;}
         // Cancel any thread currently running a connection
         if (mConnectedThread != null) {mConnectedThread.cancel(); mConnectedThread = null;}
 
 	}
-	
+
 	private void initialiseService() {
-		
+
 		if (!this.mServiceInitialised) {
 			Log.i(TAG, "Initialising the service");
-			
-			
+
+
 			this.mServiceInitialised = true;
 		}
 
 	}
-	
+
 	private OTBTApiAlpha.Stub apiEndpoint = new OTBTApiAlpha.Stub() {
-		
+
 		/*
 		 ************************************************************************************************
 		 * Overriden Methods 
@@ -163,11 +154,11 @@ public class OTBTBlueServiceAlpha extends Service{
 					return mLatestResult.toString();
 			}
 		}
-		
+
 		@Override
 		public void addListener(OTBTListenerAlpha listener)
 				throws RemoteException {
-			
+
 			synchronized (mListeners) {
 				if (mListeners.add(listener))
 					Log.d(TAG, "Listener added");
@@ -175,11 +166,11 @@ public class OTBTBlueServiceAlpha extends Service{
 					Log.d(TAG, "Listener not added");
 			}
 		}
-		
+
 		@Override
 		public void removeListener(OTBTListenerAlpha listener)
 				throws RemoteException {
-			
+
 			synchronized (mListeners) {
 				if (mListeners.size() > 0) {
 					boolean removed = false;
@@ -190,7 +181,7 @@ public class OTBTBlueServiceAlpha extends Service{
 							removed = true;
 						}
 					}
-					
+
 					if (removed)
 						Log.d(TAG, "Listener removed");
 					else 
@@ -198,9 +189,9 @@ public class OTBTBlueServiceAlpha extends Service{
 				}
 			}
 		}
-		
-		
-		
+
+
+
 		@Override
 		public String getConfiguration() throws RemoteException {
 			// NOOP
@@ -230,13 +221,13 @@ public class OTBTBlueServiceAlpha extends Service{
 		@Override
 		public void pause() throws RemoteException {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		public void kill() throws RemoteException {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -257,7 +248,7 @@ public class OTBTBlueServiceAlpha extends Service{
 			}
 			// Perform the write unsynchronized
 			r.write(data);
-			
+
 		}
 
 		@Override
@@ -265,15 +256,15 @@ public class OTBTBlueServiceAlpha extends Service{
 			// TODO Auto-generated method stub
 			BluetoothDevice device = mAdapter.getRemoteDevice(address);
 			if (D) Log.d(TAG, "connect to: " + device);
-			
+
 	        // Cancel any thread attempting to make a connection
 	        if (mState == STATE_CONNECTING) {
 	            if (mConnectThread != null) {mConnectThread.cancel(); mConnectThread = null;}
 	        }
-	        
+
 	        // Cancel any thread currently running a connection
 	        if (mConnectedThread != null) {mConnectedThread.cancel(); mConnectedThread = null;}
-	        
+
 	        // Start the thread to connect with the given device
 	        mConnectThread = new ConnectThread(device, true);
 	        mConnectThread.start();
@@ -303,21 +294,21 @@ public class OTBTBlueServiceAlpha extends Service{
 	            mConnectedThread.cancel();
 	            mConnectedThread = null;
 	        }
-	        
+
 	        setState(STATE_NONE);
 		}
 
 		@Override
 		public void resume() throws RemoteException {
 			// TODO Auto-generated method stub
-			
+
 		}
-		
-		
+
+
 	};
-	
-	
-	
+
+
+
 	/**
      * This thread runs while attempting to make an outgoing connection
      * with a device. It runs straight through; the connection either
@@ -472,17 +463,13 @@ public class OTBTBlueServiceAlpha extends Service{
     }
     
     private void bundleAll(Bundle b){
-    	try{
-	    	for(OTBTListenerAlpha listener: mListeners){
-	    		try {
-					listener.sendBundle(b);
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-	    	}
-    	}catch(Exception e){
-    		e.printStackTrace();
+    	for(OTBTListenerAlpha listener: mListeners){
+    		try {
+				listener.sendBundle(b);
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	}
     }
     
