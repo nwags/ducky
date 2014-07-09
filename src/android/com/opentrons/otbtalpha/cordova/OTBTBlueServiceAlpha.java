@@ -41,6 +41,7 @@ public class OTBTBlueServiceAlpha extends Service{
     
 	private boolean mServiceInitialised = false;
 	private List<OTBTListenerAlpha> mListeners = new ArrayList<OTBTListenerAlpha>();
+	
 	private final Object mResultLock = new Object();
 	private JSONObject mLatestResult = null;
 	
@@ -80,6 +81,14 @@ public class OTBTBlueServiceAlpha extends Service{
 		// TODO Auto-generated method stub
 		Log.i(TAG, "onBind called");
 		return apiEndpoint;
+	}
+	
+	@Override
+	public boolean onUnbind(Intent intent) {
+		Log.i(TAG, "onUnbind called");
+		boolean result = false;
+		
+		return result;
 	}
 	
 	@Override  
@@ -463,13 +472,17 @@ public class OTBTBlueServiceAlpha extends Service{
     }
     
     private void bundleAll(Bundle b){
-    	for(OTBTListenerAlpha listener: mListeners){
-    		try {
-				listener.sendBundle(b);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+    	try{
+	    	for(OTBTListenerAlpha listener: mListeners){
+	    		try {
+					listener.sendBundle(b);
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	    	}
+    	}catch(Exception e){
+    		e.printStackTrace();
     	}
     }
     
