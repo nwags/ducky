@@ -36,7 +36,7 @@ import android.util.Log;
 
 
 public class OTBTLogicAlpha implements IUpdateListener{
-	
+
 	/*
 	 ************************************************************************************************
 	 * Static values 
@@ -44,7 +44,6 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	 */
 	public static final String TAG = OTBTLogicAlpha.class.getSimpleName();
 	private static final boolean D = true;
-	
 	// Message types sent from the BluetoothSerialService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
@@ -56,27 +55,31 @@ public class OTBTLogicAlpha implements IUpdateListener{
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
-	
+
 	//nwags variable
 	public static double posx=0.0;
 	public static double posy=0.0;
 	public static double posz=0.0;
 	public static double posa=0.0;
 	public static final double rosa=0.3183099;
-	
+	public static int abc = 0;
+	public static double a_diff=0.0;
+	public static double b_diff=0.0;
+	public static double c_diff=0.0;
+
+
 	public static double xmax=400.0;
 	public static double ymax=200.0;
 	public static double zmax=200.0;
 	public static double amax=24.0;
 	public static boolean power=true;
 	public static String macAddress;
-	public static boolean isBooming=false;
 	/*
 	 ************************************************************************************************
 	 * Keys 
 	 ************************************************************************************************
 	 */
-	
+
 	// actions
     public static final String ACTION_LIST = "list";
     public static final String ACTION_CONNECT = "connect";
@@ -110,36 +113,36 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	// Error codes
 	public static final int ERROR_NONE_CODE = 0;
 	public static final String ERROR_NONE_MSG = "";
-	
+
 	public static final int ERROR_PLUGIN_ACTION_NOT_SUPPORTED_CODE = -1;
 	public static final String ERROR_PLUGIN_ACTION_NOT_SUPPORTED_MSG = "Passed action not supported by Plugin";
-	
+
 	public static final int ERROR_INIT_NOT_YET_CALLED_CODE = -2;
 	public static final String ERROR_INIT_NOT_YET_CALLED_MSG = "Please call init prior any other action";
-	
+
 	public static final int ERROR_SERVICE_NOT_RUNNING_CODE = -3;
 	public static final String ERROR_SERVICE_NOT_RUNNING_MSG = "Sevice not currently running";
-	
+
 	public static final int ERROR_UNABLE_TO_BIND_TO_BACKGROUND_SERVICE_CODE = -4;
 	public static final String ERROR_UNABLE_TO_BIND_TO_BACKGROUND_SERVICE_MSG ="Plugin unable to bind to background service";
-	
+
 	public static final int ERROR_UNABLE_TO_RETRIEVE_LAST_RESULT_CODE = -5;
 	public static final String ERROR_UNABLE_TO_RETRIEVE_LAST_RESULT_MSG = "Unable to retrieve latest result (reason unknown)";
-	
+
 	public static final int ERROR_LISTENER_ALREADY_REGISTERED_CODE = -6;
 	public static final String ERROR_LISTENER_ALREADY_REGISTERED_MSG = "Listener already registered";
-	
+
 	public static final int ERROR_LISTENER_NOT_REGISTERED_CODE = -7;
 	public static final String ERROR_LISTENER_NOT_REGISTERED_MSG = "Listener not registered";
 
 	public static final int ERROR_UNABLE_TO_CLOSED_LISTENER_CODE = -8;
 	public static final String ERROR_UNABLE_TO_CLOSED_LISTENER_MSG = "Unable to close listener";
-	
+
 	public static final int ERROR_ACTION_NOT_SUPPORTED__IN_PLUGIN_VERSION_CODE = -9;
 	public static final String ERROR_ACTION_NOT_SUPPORTED__IN_PLUGIN_VERSION_MSG = "Action is not supported in this version of the plugin";
 
 	public static final int ERROR_EXCEPTION_CODE = -99;
-	
+
 	public static final String blueName = OTBTBlueServiceAlpha.class.getName();
 	public static final String redName = OTBTServiceAlpha.class.getName();
 	public static ServiceDetails blueService;
@@ -152,7 +155,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	private Context mContext;
 	private Hashtable<String, ServiceDetails> mServices = new Hashtable<String, ServiceDetails>();
 
-	
+
 	// callbacks
     private CallbackContext connectCallback;
     private CallbackContext dataAvailableCallback;
@@ -163,8 +166,8 @@ public class OTBTLogicAlpha implements IUpdateListener{
     //private OTBTWorkerAlpha otbtworker;
     
     StringBuffer buffer = new StringBuffer();
-	
-	
+
+
 	/*
 	 ************************************************************************************************
 	 * Constructors 
@@ -176,15 +179,15 @@ public class OTBTLogicAlpha implements IUpdateListener{
     
 	public OTBTLogicAlpha(Context context) {
 		this.mContext = context;
-		
+
 		try{
 			//String blueName = OTBTBlueServiceAlpha.class.getName();//"BLUE";
-			
+
 			Log.d(TAG, "Finding servicename " + blueName);
-			
+
 			ServiceDetails service = null;
 			Log.d(TAG, "Services contains " + this.mServices.size() + " records");
-			
+
 			if(this.mServices.containsKey(blueName)) {
 				Log.d(TAG, "Found existing ServiceDetails");
 				service = this.mServices.get(blueName);
@@ -194,7 +197,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				this.mServices.put(blueName, service);
 				blueService = service;
 			}
-			
+
 			if(!service.isInitialised()){
 				Log.d(TAG, "blueService not yet initialised, initialising...");
 				service.initialise();
@@ -203,12 +206,12 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			Log.d(TAG, "blueService.startService()");
 			service.startService();//.startBooming(args, listener, listenerExtras);
 			//result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-			
+
 		}catch(Exception ex){
 			Log.d(TAG, "starting BLUE failed", ex);
 			//result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 		}
-		
+
 	}
 
 	/*
@@ -216,23 +219,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	 * Public Methods 
 	 ************************************************************************************************
 	 */
-	
+
 	public boolean isActionValid(String action) {
 		boolean result = false;
-		
+
 		if( ACTION_LIST.equals(action)) result = true;
 	    if( ACTION_CONNECT.equals(action)) result = true;
-	    		
+
 	    if( ACTION_DISCONNECT.equals(action)) result = true;
-	    
+
 	    //if( ACTION_AVAILABLE.equals(action)) result = true;
-	    
+
 	    if( ACTION_SUBSCRIBE.equals(action)) result = true;
 	    if( ACTION_UNSUBSCRIBE.equals(action)) result = true;
 	    if( ACTION_IS_ENABLED.equals(action)) result = true;
 	    if( ACTION_IS_CONNECTED.equals(action)) result = true;
 	    if( ACTION_CLEAR.equals(action)) result = true;
-	    
+
 	    //nwags-actions
 	    if( ACTION_JOG.equals(action)) result = true;
 	    if( ACTION_SET_DIMENSIONS.equals(action)) result = true;
@@ -246,17 +249,17 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		if( ACTION_PAUSE.equals(action)) result = true;
 		if( ACTION_RESUME.equals(action)) result = true;
 		if( ACTION_KILL.equals(action)) result = true;
-	    
+
 	    return result;
 	}
-	
+
 	public ExecuteResult execute(String action, CordovaArgs args) {
 		return execute(action, args, null, null);
 	}
-	
+
 	public ExecuteResult execute(String action, CordovaArgs args, IUpdateListener listener, Object[] listenerExtras) {
 		ExecuteResult result = null;
-		
+
 		Log.d(TAG, "Start of Execute");
 		try{
 			Log.d(TAG, "Within try block");
@@ -264,7 +267,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					(!args.isNull(0)) &&
 					(args.get(0) instanceof String) &&
 					(args.getString(0).length() > 0)) {
-				
+
 				/*
 				String serviceName = data.getString(0);
 				
@@ -286,7 +289,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				*/
 			}
 			Log.d(TAG, "Action = " + action);
-			
+
 			if (bluetoothAdapter == null) {
 	            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 	        }
@@ -294,123 +297,123 @@ public class OTBTLogicAlpha implements IUpdateListener{
 //	        if (otbtworker == null) {
 //	            otbtworker = new OTBTWorkerAlpha(mHandler);
 //	        }
-			
+
 			if(ACTION_LIST.equals(action)){
-				
+
 				result = listBondedDevices(listenerExtras);
-				
+
 			} else if(ACTION_CONNECT.equals(action)){
-				
+
 				boolean secure = true;
 				result = connect(args, secure, listenerExtras);
-				
-				
+
+
 			} else if(ACTION_DISCONNECT.equals(action)){
-				
+
 				//connectCallback = null;
 				result = disconnect(listenerExtras);
 				//obtworker.stop();
 				//((CallbackContext)listenerExtras[0]).success();
-				
+
 			} else if(ACTION_SUBSCRIBE.equals(action)){
-				
+
 				result = subscribe(listenerExtras);
 				//delimiter = args.getString(0);
 				//dataAvailableCallback = (CallbackContext) listenerExtras[0];
-				
+
 			} else if(ACTION_UNSUBSCRIBE.equals(action)){
-				
+
 				result = unsubscribe(listenerExtras);
 				//PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
 	            //pluginResult.setKeepCallback(true);
 	            //((CallbackContext)listenerExtras[0]).sendPluginResult(pluginResult);
-				
-				
+
+
 			} else if(ACTION_IS_ENABLED.equals(action)){
-				
+
 				result = isenabled(listenerExtras);
-				
+
 			} else if(ACTION_IS_CONNECTED.equals(action)){
-				
+
 				result = isconnected(listenerExtras);
-				
+
 			} else if(ACTION_CLEAR.equals(action)){
-				
+
 				result = clear(listenerExtras);
-				
+
 			} else if(ACTION_JOG.equals(action)){
-				
+
 				result = jog(args, listenerExtras);
-				
+
 			} else if(ACTION_SET_DIMENSIONS.equals(action)){
-				
+
 				result = setdimensions(args, listenerExtras);
-				
+
 			} else if(ACTION_GET_DIMENSIONS.equals(action)){
-				
+
 				result = getdimensions(listenerExtras);
-				
+
 			} else if(ACTION_HOME.equals(action)){
-				
+
 				result = home(listenerExtras);
-				
+
 			} else if(ACTION_RUN.equals(action)){
-				
+
 				result = run(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_LOAD.equals(action)){
-				
+
 				result = load(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_SAVE.equals(action)){
-				
+
 				result = save(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_LIST_FILES.equals(action)){
-				
+
 				result = listfiles(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_STOP.equals(action)){
-				
+
 				result = stop(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_PAUSE.equals(action)){
-				
+
 				result = pause(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_RESUME.equals(action)){
-				
+
 				result = resume(args, listener, listenerExtras);
-				
+
 			} else if(ACTION_KILL.equals(action)){
-				
+
 				result = kill(args, listener, listenerExtras);
-				
+
 			}
-			
-			
-			
-			
-			
+
+
+
+
+
 		} catch (Exception ex) {
 			result = new ExecuteResult(ExecuteStatus.ERROR);
 			Log.d(TAG, "Exception - " + ex.getMessage());
 		}
-		
+
 		return result;
 	}
-	
+
 	public void onDestroy() {
 		Log.d(TAG, "onDestroy Start");
 		try{
 			Log.d(TAG, "Checking for services");
 			if(this.mServices != null &&
 					this.mServices.size() > 0) {
-				
+
 				Log.d(TAG, "Found services");
-				
+
 				Enumeration<String> keys = this.mServices.keys();
-				
+
 				while(keys.hasMoreElements()){
 					String key = keys.nextElement();
 					ServiceDetails service = this.mServices.get(key);
@@ -421,18 +424,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}catch(Throwable t){
 			Log.d(TAG, "Error has occurred while trying to close services", t);
 		}
-		
+
 		this.mServices = null;
 		Log.d(TAG, "onDestroy Finish");
-		
+
 	}
-	
+
 	public ExecuteResult listBondedDevices(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			JSONArray deviceList = new JSONArray();
 			Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
-			
+
 			for (BluetoothDevice device : bondedDevices) {
 	        	if(device.getName().toLowerCase().contains("tron")){
 		            JSONObject json = new JSONObject();
@@ -453,28 +456,28 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult connect(CordovaArgs args, boolean secure, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			macAddress = args.getString(0);
-			
+
 			try{
 				Log.d(TAG, "getting BLUE service");
 				if(this.mServices != null &&
 						this.mServices.size() > 0){
 					Log.d(TAG, "Found services");
-					
+
 					ServiceDetails service = this.mServices.get(blueName);
 					Log.d(TAG, "Calling BLUE service");
 					service.connect(macAddress);
 					connectCallback = ((CallbackContext) listenerExtras[0]);
 				}
-					
+
 			}catch(Throwable t){
 				Log.d(TAG, "Error occurred while getting BLUE, stop holding your breath", t);
 			}
-			
+
             PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
             pluginResult.setKeepCallback(true);
             ((CallbackContext) listenerExtras[0]).sendPluginResult(pluginResult);
@@ -486,7 +489,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	// The Handler that gets information back from the BluetoothSerialService
     // Original code used handler for the because it was talking to the UI.
     // Consider replacing with normal callbacks
@@ -572,14 +575,14 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    			PluginResult result = new PluginResult(PluginResult.Status.OK, jsonStr);
 	                result.setKeepCallback(true);
 	                dataAvailableCallback.sendPluginResult(result);
-	
+
 	    		} catch(Exception e){
 	    			if(e.getMessage()!=null)
 	    				Log.e(TAG, e.getMessage());
-	    			
+
 	    		}
-	    		
-	    		
+
+
 	            sendDataToSubscriber();
             }
     	}
@@ -604,7 +607,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
         }
         return data;
     }
-	
+
     private String processBody(JSONObject json) throws JSONException {
     	Log.d(TAG, "processBody called");
     	String result = "";
@@ -634,7 +637,17 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
 			posa = (2.0*Math.PI*t_posa*rosa)/360.0;
 			Log.d(TAG, "posa = "+String.valueOf(posa));
+			if(abc==0){
+				jResult.put("a", posa-a_diff);
+			}else if(abc==1){
+				jResult.put("b", posa-b_diff);
+			}else if(abc==2){
+				jResult.put("c", posa-c_diff);
+			}
 			jResult.put("a", posa);
+			Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
+			Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
+			Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
     	}
     	if (sr.has("stat")){
 			switch (sr.getInt("stat")){
@@ -686,7 +699,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult subscribe(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -703,7 +716,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult unsubscribe(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -717,7 +730,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult isenabled(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -733,11 +746,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult isconnected(Object[] listenerExtras){
 		return blueService.getState(listenerExtras);
 	}
-	
+
 	public ExecuteResult clear(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -750,7 +763,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult jog(CordovaArgs args, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -758,7 +771,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			args_String.trim();
 			JSONObject json = new JSONObject(args_String);
 			Log.d(TAG, "json: "+json.toString());
-			
+
 			if(json.has("reset")) {
 	    		LOG.d(TAG, "reset");
 	    		Log.d(TAG, "reset");
@@ -781,14 +794,14 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    			blueService.write("{\"4pm\":\"1\"}\n".getBytes());
 	    			power = true;
 	    			((CallbackContext)listenerExtras[0]).success();
-	                
+
 	    		}else{
 	    			blueService.write("$md\n".getBytes());
 	    			power = false;
 	    			((CallbackContext)listenerExtras[0]).success();
 	    		}
 	    	}
-	    	
+
 	    	String gogoStr = "";
 	    	String gocode = "{\"gc\":\"G90G0";//\"}\n";
 	    	if(json.has("x")||json.has("X")) {
@@ -811,16 +824,50 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		gocode+=gogoStr;
 	    	}
 	    	if(json.has("a")) {
+	    		abc=0;
 	    		blueService.write("{\"gc\":\"M5\"}\n".getBytes());
-	    		double goa = json.getDouble("a");
+	    		double goa = json.getDouble("a");//*amax;
+	    		/*if(testee){
+	    			testee=false;
+	    			goa=0.0;
+	    		}else{
+	    			testee=true;
+	    			goa=10.0;
+	    		}*/
+	    		goa-=a_diff;
+	    		b_diff+=(goa-b_diff);
+	    		c_diff+=(goa-c_diff);
 	    		gogoStr = "a"+String.valueOf(goa);
+	    		gocode+=gogoStr;
+	    	}else if(json.has("b")){
+	    		abc=1;
+	    		blueService.write("{\"gc\":\"M3\"}\n".getBytes());
+	    		double gob = json.getDouble("b");
+	    		gob-=b_diff;
+	    		a_diff+=(gob-a_diff);
+	    		a_diff=0.0;
+	    		c_diff+=(gob-c_diff);
+	    		gogoStr = "a"+String.valueOf(gob);
+	    		gocode+=gogoStr;
+	    	}else if(json.has("c")){
+	    		abc=2;
+	    		blueService.write("{\"gc\":\"M4\"}\n".getBytes());
+	    		double goc = json.getDouble("c");
+	    		goc-=c_diff;
+	    		a_diff+=(goc-a_diff);
+	    		a_diff=0.0;
+	    		b_diff+=(goc-b_diff);
+	    		gogoStr = "a"+String.valueOf(goc);
 	    		gocode+=gogoStr;
 	    	}
 	    	gocode+="\"}\n";
 	    	Log.d(TAG, "gcode = "+gocode);
+	    	Log.d(TAG, "a_diff = "+String.valueOf(a_diff));
+	    	Log.d(TAG, "b_diff = "+String.valueOf(b_diff));
+	    	Log.d(TAG, "c_diff = "+String.valueOf(c_diff));
 	    	blueService.write(gocode.getBytes());
 	        ((CallbackContext)listenerExtras[0]).success();
-			
+
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 		}catch(Exception ex){
 			Log.d(TAG, "jog failed", ex);
@@ -828,12 +875,12 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult setdimensions(CordovaArgs args, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			JSONObject jsonObj = args.getJSONObject(0);
-	    	
+
 	    	if(jsonObj.has("xmax")) {
 	    		xmax = jsonObj.getDouble("xmax");
 	    	}
@@ -854,7 +901,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult getdimensions(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -871,7 +918,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult home(Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -891,7 +938,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					homey.run();
 					return null;
 				}
-				
+
 			}.execute();
 	    	((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
@@ -901,29 +948,22 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult run(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
-		if(isBooming){
-			Log.d(TAG, "already booming");
-			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "already booming"));
-			return result;
-		}
+
 		if(args==null){
-			Log.d(TAG, "run failed, args null");
+			Log.d(TAG, "run failed");
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "null arg"));
-			return result;
 		}
 		try{
-			isBooming = true;
-			Log.d(TAG, "isBooming -> true");
 			String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
-			
+
 			Log.d(TAG, "Finding servicename " + serviceName);
-			
+
 			ServiceDetails service = null;
 			Log.d(TAG, "Services contains " + this.mServices.size() + " records");
-			
+
 			if(this.mServices.containsKey(serviceName)) {
 				Log.d(TAG, "Found existing ServiceDetails");
 				service = this.mServices.get(serviceName);
@@ -932,22 +972,20 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				service = new ServiceDetails(this.mContext, serviceName);
 				this.mServices.put(serviceName, service);
 			}
-			
+
 			if(!service.isInitialised())
 				service.initialise();
 			// TODO Start service and all that jazz
 			service.startBooming(args, listener, listenerExtras);
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-			
+
 		}catch(Exception ex){
-			Log.d(TAG, "isBooming -> false");
-			isBooming = false;
 			Log.d(TAG, "run failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult load(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -989,7 +1027,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult save(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -1008,7 +1046,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			    PrintWriter writer = new PrintWriter(file);
 			    writer.print("");
 			    writer.close();
-			    
+
 			    outputStream = new FileOutputStream(file, false);
 			    outputStream.write(job.getBytes());
 			    outputStream.close();
@@ -1017,14 +1055,14 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		    }
 		    ((CallbackContext)listenerExtras[0]).success();
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-			
+
 		}catch(Exception ex){
 			Log.d(TAG, "save", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult listfiles(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -1052,9 +1090,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
-	
-	
+
+
+
 	public ExecuteResult stop(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
@@ -1067,18 +1105,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult pause(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			try{
 				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
-				
+
 				Log.d(TAG, "Finding servicename " + serviceName);
-				
+
 				ServiceDetails service = null;
 				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
-				
+
 				if(this.mServices.containsKey(serviceName)) {
 					Log.d(TAG, "Found existing ServiceDetails");
 					service = this.mServices.get(serviceName);
@@ -1087,13 +1125,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					service = new ServiceDetails(this.mContext, serviceName);
 					this.mServices.put(serviceName, service);
 				}
-				
+
 				if(!service.isInitialised())
 					service.initialise();
-				
+
 				service.pause(args, listener, listenerExtras);
 				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-				
+
 			}catch(Exception ex){
 				Log.d(TAG, "run failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1104,18 +1142,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult resume(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			try{
 				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
-				
+
 				Log.d(TAG, "Finding servicename " + serviceName);
-				
+
 				ServiceDetails service = null;
 				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
-				
+
 				if(this.mServices.containsKey(serviceName)) {
 					Log.d(TAG, "Found existing ServiceDetails");
 					service = this.mServices.get(serviceName);
@@ -1124,13 +1162,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					service = new ServiceDetails(this.mContext, serviceName);
 					this.mServices.put(serviceName, service);
 				}
-				
+
 				if(!service.isInitialised())
 					service.initialise();
-				
+
 				service.resume(args, listener, listenerExtras);
 				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-				
+
 			}catch(Exception ex){
 				Log.d(TAG, "run failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1141,18 +1179,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	public ExecuteResult kill(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
 		try{
 			try{
 				String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
-				
+
 				Log.d(TAG, "Finding servicename " + serviceName);
-				
+
 				ServiceDetails service = null;
 				Log.d(TAG, "Services contains " + this.mServices.size() + " records");
-				
+
 				if(this.mServices.containsKey(serviceName)) {
 					Log.d(TAG, "Found existing ServiceDetails");
 					service = this.mServices.get(serviceName);
@@ -1161,13 +1199,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					service = new ServiceDetails(this.mContext, serviceName);
 					this.mServices.put(serviceName, service);
 				}
-				
+
 				if(!service.isInitialised())
 					service.initialise();
-				
+
 				service.kill(args, listener, listenerExtras);
 				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-				
+
 			}catch(Exception ex){
 				Log.d(TAG, "run failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
@@ -1178,7 +1216,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		}
 		return result;
 	}
-	
+
 	private JSONObject createJSONResult(Boolean success, int errorCode, String errorMessage) {
 		JSONObject result = new JSONObject();
 
@@ -1210,7 +1248,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		*/	
 		return result;
 	}
-	
+
 	/*
 	 ************************************************************************************************
 	 * Internal Class 
@@ -1223,7 +1261,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		 ************************************************************************************************
 		 */
 		public final String LOCALTAG = OTBTLogicAlpha.ServiceDetails.class.getSimpleName();
-		
+
 		/*
 		 ************************************************************************************************
 		 * Fields 
@@ -1231,23 +1269,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		 */
 		private String mServiceName = "";
 		private Context mContext;
-		
+
 		private OTBTApiAlpha mApi;
-		
+
 		private String mUniqueID = java.util.UUID.randomUUID().toString();
-		
+
 		private boolean mInitialised = false;
-		
+
 		private Intent mService = null;
-		
+
 		private Object mServiceConnectedLock = new Object();
 		private Boolean mServiceConnected = null;
-		
+
 		private IUpdateListener mListener = null;
 		private Object[] mListenerExtras = null;
-		
+
 		private boolean currentlyBooming = false;
-				
+
 		/*
 		 ************************************************************************************************
 		 * Constructors 
@@ -1258,11 +1296,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			this.mContext = context;
 			this.mServiceName = serviceName;
 		}
-		
+
 		public ExecuteResult connect(String macAddress) {
 			Log.d(LOCALTAG, "Starting connect(String macAddress)");
 			ExecuteResult result = null;
-			
+
 			try{
 				Log.d(LOCALTAG, "Attempting to connect to "+macAddress);
 				if(mApi==null){
@@ -1274,7 +1312,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "startBooming failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			Log.d(LOCALTAG, "Finished startBooming");
 			return result;
 		}
@@ -1287,13 +1325,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public void initialise()
 		{
 			this.mInitialised = true;
-			
+
 			// If the service is running, then automatically bind to it
 			if (this.isServiceRunning()) {
 				startService();
 			}
 		}
-		
+
 		public boolean isInitialised()
 		{
 			return mInitialised;
@@ -1303,7 +1341,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		{
 			Log.d(LOCALTAG, "Starting startService");
 			ExecuteResult result = null;
-			
+
 			try {
 				Log.d(LOCALTAG, "Attempting to bind to Service");
 				if (this.bindToService()) {
@@ -1317,21 +1355,21 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "startService failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			Log.d(LOCALTAG, "Finished startService");
 			return result;
 		}
-		
+
 		public ExecuteResult startBooming(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras)
 		{
 			Log.d(LOCALTAG, "Starting startBooming");
 			ExecuteResult result = null;
-			
+
 			try{
 				Log.d(LOCALTAG, "Attempting to start Booming");
 				if(!this.currentlyBooming){
 					Log.d(LOCALTAG, "not quite Booming yet");
-					
+
 					try{
 						this.mService = new Intent(this.mServiceName);
 						if(this.mServiceName.equals(redName)){
@@ -1363,7 +1401,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					} catch(Exception ex) {
 						Log.d(LOCALTAG, "bindToService failed", ex);
 					}
-					
+
 					result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 				} else {
 					Log.d(LOCALTAG, "already Booming");
@@ -1373,11 +1411,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "startBooming failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			Log.d(LOCALTAG, "Finished startBooming");
 			return result;
 		}
-		
+
 		public ExecuteResult pause(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 			Log.d(LOCALTAG, "starting pause");
 			ExecuteResult result = null;
@@ -1391,7 +1429,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
+
 		public ExecuteResult resume(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 			Log.d(LOCALTAG, "starting resume");
 			ExecuteResult result = null;
@@ -1405,7 +1443,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
+
 		public ExecuteResult kill(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 			Log.d(LOCALTAG, "starting kill");
 			ExecuteResult result = null;
@@ -1420,8 +1458,8 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
-		
+
+
 		public ExecuteResult write(byte[] msg) {
 			Log.d(LOCALTAG, "starting write(byte[] msg)");
 			ExecuteResult result = null;
@@ -1435,7 +1473,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
+
 		public ExecuteResult disconnect(){
 			Log.d(LOCALTAG, "starting disconnect()");
 			ExecuteResult result = null;
@@ -1448,7 +1486,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
+
 		public ExecuteResult getState(Object[] listenerExtras){
 			Log.d(LOCALTAG, "starting getState(Object[] listenerExtras)");
 			ExecuteResult result = null;
@@ -1465,20 +1503,18 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			return result;
 		}
-		
+
 		public ExecuteResult stopService()
 		{
 			ExecuteResult result = null;
-			Log.d(LOCALTAG, "stopService called");
+			Log.d("ServiceDetails", "stopService called");
 			this.currentlyBooming = false;
-			Log.d(LOCALTAG, "currentlyBooming -> false");
-			isBooming = false;
-			Log.d(LOCALTAG, "isBooming -> false");
+			Log.d(TAG, "currentlyBooming set to false");
 			try {
-				
+
 				Log.d("ServiceDetails", "Unbinding Service");
 				this.mContext.unbindService(serviceConnection);
-				
+
 				Log.d("ServiceDetails", "Stopping service");
 				if (this.mContext.stopService(this.mService))
 				{
@@ -1491,10 +1527,10 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "stopService failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			return result;
 		}
-		
+
 		public ExecuteResult enableTimer(JSONArray data)
 		{
 			ExecuteResult result = null;
@@ -1510,11 +1546,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		public ExecuteResult disableTimer()
 		{
 			ExecuteResult result = null;
-		
+
 			try {
 				//mApi.disableTimer();
 				result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
@@ -1525,11 +1561,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		public ExecuteResult registerForBootStart()
 		{
 			ExecuteResult result = null;
-		
+
 			try {
 				//PropertyHelper.addBootService(this.mContext, this.mServiceName);
 
@@ -1541,11 +1577,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		public ExecuteResult deregisterForBootStart()
 		{
 			ExecuteResult result = null;
-		
+
 			try {
 				//PropertyHelper.removeBootService(this.mContext, this.mServiceName);
 
@@ -1557,11 +1593,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		public ExecuteResult setConfiguration(JSONArray data)
 		{
 			ExecuteResult result = null;
-			
+
 			try {
 				if (this.isServiceRunning()) {
 					Object obj;
@@ -1580,23 +1616,23 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "setConfiguration failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			return result;
 		}
 
 		public ExecuteResult getStatus()
 		{
 			ExecuteResult result = null;
-			
+
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
-			
+
 			return result;
 		}
-		
+
 		public ExecuteResult runOnce()
 		{
 			ExecuteResult result = null;
-			
+
 			try {
 				if (this.isServiceRunning()) {
 					//mApi.run();
@@ -1608,26 +1644,26 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "runOnce failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			return result;
 		}
-		
+
 		public ExecuteResult registerForUpdates(IUpdateListener listener, Object[] listenerExtras)
 		{
 			ExecuteResult result = null;
 			try {
-				
+
 				// Check for if the listener is null
 				// If it is then it will be because the Plugin version doesn't support the method
 				if (listener == null) {
 					result = new ExecuteResult(ExecuteStatus.INVALID_ACTION, createJSONResult(false, ERROR_ACTION_NOT_SUPPORTED__IN_PLUGIN_VERSION_CODE, ERROR_ACTION_NOT_SUPPORTED__IN_PLUGIN_VERSION_MSG));
 				} else {
-					
+
 					// If a listener already exists, then we fist need to deregister the original
 					// Ignore any failures (likely due to the listener not being available anymore)
 					if (this.isRegisteredForUpdates()) 
 						this.deregisterListener();
-				
+
 					this.mListener = listener;
 					this.mListenerExtras = listenerExtras;
 
@@ -1637,10 +1673,10 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d(LOCALTAG, "regsiterForUpdates failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			return result;
 		}
-		
+
 		public ExecuteResult deregisterForUpdates()
 		{
 			ExecuteResult result = null;
@@ -1652,20 +1688,15 @@ public class OTBTLogicAlpha implements IUpdateListener{
 						result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_UNABLE_TO_CLOSED_LISTENER_CODE, ERROR_UNABLE_TO_CLOSED_LISTENER_MSG));
 				else
 					result = new ExecuteResult(ExecuteStatus.INVALID_ACTION, createJSONResult(false, ERROR_LISTENER_NOT_REGISTERED_CODE, ERROR_LISTENER_NOT_REGISTERED_MSG));
-				
+
 			} catch (Exception ex) {
 				Log.d(LOCALTAG, "deregsiterForUpdates failed", ex);
 				result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 			}
-			
+
 			return result;
 		}
-		
-		
-		
-		
-		
-		
+
 		/*
 		 * Background Service specific methods
 		 */
@@ -1675,7 +1706,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			try {
 				// Remove the lister to this publisher
 				this.deregisterListener();
-				
+
 				Log.d("ServiceDetails", "Removing ServiceListener");
 				mApi.removeListener(serviceListener);
 				Log.d("ServiceDetails", "Removing ServiceConnection");
@@ -1688,7 +1719,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			}
 			Log.d("ServiceDetails", "Close finished");
 		}
-		
+
 		private boolean deregisterListener() {
 			boolean result = false;
 
@@ -1701,17 +1732,17 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				} catch (Exception ex) {
 					Log.d("ServiceDetails", "Error occurred while closing the listener", ex);
 				}
-				
+
 				this.mListener = null;
 				this.mListenerExtras = null;
 				Log.d("ServiceDetails", "Listener deregistered");
-				
+
 				result = true;
 			}
-			
+
 			return result;
 		}
-		
+
 		/*
 		 ************************************************************************************************
 		 * Private Methods 
@@ -1719,9 +1750,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		 */
 		private boolean bindToService() {
 			boolean result = false;
-			
+
 			Log.d(LOCALTAG, "Starting bindToService");
-			
+
 			try {
 				this.mService = new Intent(this.mServiceName);
 				if(this.mService==null){
@@ -1733,7 +1764,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 					this.mService.setClass(mContext, OTBTServiceAlpha.class);
 				Log.d(LOCALTAG, "Attempting to start service");
 				this.mContext.startService(this.mService);
-				
+
 				Log.d(LOCALTAG, "Attempting to bind to service");
 				if (this.mContext.bindService(this.mService, serviceConnection, 1)) {
 					Log.d(LOCALTAG, "Waiting for service connected lock");
@@ -1751,12 +1782,12 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			} catch (Exception ex) {
 				Log.d(LOCALTAG, "bindToService failed", ex);
 			}
-			
+
 			Log.d(LOCALTAG, "Finished bindToService");
-			
+
 			return result;
 		}
-		
+
 		private ServiceConnection serviceConnection = new ServiceConnection() {
 			@Override
 			public void onServiceConnected(ComponentName name, IBinder service) {
@@ -1767,7 +1798,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				} catch (RemoteException e) {
 					Log.d(LOCALTAG, "addListener failed", e);
 				}
-				
+
 				synchronized(mServiceConnectedLock) {
 					mServiceConnected = true;
 
@@ -1775,7 +1806,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				}
 
 			}
-			
+
 			@Override
 			public void onServiceDisconnected(ComponentName name) {
 				synchronized(mServiceConnectedLock) {
@@ -1785,34 +1816,34 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				}
 			}
 		};
-		
+
 		private OTBTListenerAlpha.Stub serviceListener = new OTBTListenerAlpha.Stub() {
 			@Override
 			public void handleUpdate() throws RemoteException {
 				handleLatestResult();
 			}
-			
+
 			@Override
 			public String getUniqueID() throws RemoteException {
 				return mUniqueID;
 			}
-			
+
 			@Override
 			public void sendMessage(String data) throws RemoteException {
 				// TODO Auto-generated method stub
-				
+
 			}
-			
+
 			@Override
 			public void notifySuccess() throws RemoteException {
 				// TODO Auto-generated method stub
-				
+
 			}
-			
+
 			@Override
 			public void notifyError(String error) throws RemoteException {
 				// TODO Auto-generated method stub
-				
+
 			}
 
 			@Override
@@ -1873,19 +1904,20 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			@Override
 			public void shutMeDown() throws RemoteException {
+				// TODO Auto-generated method stub
 				Log.d(TAG, "shutMeDown() called");
-				//currentlyBooming = false;
-				stopService();
+				currentlyBooming = false;
+				//stopService();
 			}
-			
+
 		};
 // blah blah blah blah blah blah blah
 		private void handleLatestResult() {
 			Log.d("ServiceDetails", "Latest results received");
-			
+
 			if (this.isRegisteredForUpdates()) {
 				Log.d("ServiceDetails", "Calling listener");
-				
+
 				ExecuteResult result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG), false);
 				try {
 					this.mListener.handleUpdate(result, this.mListenerExtras);
@@ -1900,7 +1932,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 				Log.d("ServiceDetails", "No action performed");
 			}
 		}
-		
+
 		private JSONObject createJSONResult(Boolean success, int errorCode, String errorMessage) {
 			JSONObject result = new JSONObject();
 
@@ -1929,14 +1961,14 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			try { result.put("RegisteredForBootStart", isRegisteredForBootStart()); } catch (Exception ex) {Log.d(LOCALTAG, "Adding RegisteredForBootStart to JSONObject failed", ex);};
 			try { result.put("RegisteredForUpdates", isRegisteredForUpdates()); } catch (Exception ex) {Log.d(LOCALTAG, "Adding RegisteredForUpdates to JSONObject failed", ex);};
-				
+
 			return result;
 		}
-		
+
 		private boolean isServiceRunning()
 		{
 			boolean result = false;
-			
+
 			try {
 				// Return Plugin with ServiceRunning true/ false
 				ActivityManager manager = (ActivityManager)this.mContext.getSystemService(Context.ACTIVITY_SERVICE); 
@@ -1951,24 +1983,24 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 		    return result;
 		}
-		
+
 		private Boolean isTimerEnabled()
 		{
 			Boolean result = false;
-			
+
 			try {
 				//result = mApi.isTimerEnabled();
 			} catch (Exception ex) {
 				Log.d(LOCALTAG, "isTimerEnabled failed", ex);
 			}
-			
+
 			return result;
 		}
-		
+
 		private Boolean isRegisteredForBootStart()
 		{
 			Boolean result = false;
-		
+
 			try {
 				//result = PropertyHelper.isBootService(this.mContext, this.mServiceName);
 			} catch (Exception ex) {
@@ -1977,7 +2009,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		private Boolean isRegisteredForUpdates()
 		{
 			if (this.mListener == null)
@@ -1985,21 +2017,21 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			else
 				return true;
 		}
-		
+
 		private JSONObject getConfiguration()
 		{
 			JSONObject result = null;
-			
+
 			try {
 				String data = mApi.getConfiguration();
 				result = new JSONObject(data);
 			} catch (Exception ex) {
 				Log.d(LOCALTAG, "getConfiguration failed", ex);
 			}
-			
+
 			return result;
 		}
-		
+
 		private JSONObject getLatestResult()
 		{
 			JSONObject result = null;
@@ -2013,20 +2045,20 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			return result;
 		}
-		
+
 		private int getTimerMilliseconds()
 		{
 			int result = -1;
-			
+
 			try {
 				//result = mApi.getTimerMilliseconds();
 			} catch (Exception ex) {
 				Log.d(LOCALTAG, "getTimerMilliseconds failed", ex);
 			}
-			
+
 			return result;
 		}
-		
+
 	}
 
 	protected class ExecuteResult {
@@ -2043,19 +2075,19 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public ExecuteStatus getStatus() {
 			return this.mStatus;
 		}
-		
+
 		public void setStatus(ExecuteStatus pStatus) {
 			this.mStatus = pStatus;
 		}
-		
+
 		public JSONObject getData() {
 			return this.mData;
 		}
-		
+
 		public void setData(JSONObject pData) {
 			this.mData = pData;
 		}
-		
+
 		public boolean isFinished() {
 			return this.mFinished;
 		}
@@ -2063,7 +2095,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public void setFinished(boolean pFinished) {
 			this.mFinished = pFinished;
 		}
-		
+
 		/*
 		 ************************************************************************************************
 		 * Constructors 
@@ -2072,7 +2104,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public ExecuteResult(ExecuteStatus pStatus) {
 			this.mStatus = pStatus;
 		}
-		
+
 		public ExecuteResult(ExecuteStatus pStatus, JSONObject pData) {
 			this.mStatus = pStatus;
 			this.mData = pData;
@@ -2090,7 +2122,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public void handleUpdate(ExecuteResult logicResult, Object[] listenerExtras);
 		public void closeListener(ExecuteResult logicResult, Object[] listenerExtras);
 	}*/
-	
+
 	/*
 	 ************************************************************************************************
 	 * Enums 
@@ -2101,19 +2133,19 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		ERROR,
 		INVALID_ACTION
 	}
-	
+
 	@Override
 	public void handleUpdate(ExecuteResult logicResult, Object[] listenerExtras) {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	@Override
 	public void closeListener(ExecuteResult logicResult, Object[] listenerExtras) {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	private class HomeStarRunner implements Runnable{
 
 		@Override
@@ -2121,8 +2153,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			blueService.write("{\"gc\":\"M5\"}\n".getBytes());
 			blueService.write("{\"gc\":\"G28.2X0Y0Z0A0\"}\n".getBytes());
 		}
-		
-	}
-	
-}
 
+	}
+
+}
