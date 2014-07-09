@@ -52,32 +52,32 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	
     public static final String blueName = OTBTBlueServiceAlpha.class.getName();
     
+    // Received when starting a job
     public static String args;
     public static JSONObject job;
     public static JSONArray ingredients;
     
-    
+    // Control operation during job run
     public static boolean kill = false;
     public static boolean paused = false;
     
+    // Control during setup
 	public static boolean oscCalled = false;
-    StringBuffer buffer = new StringBuffer();
-    
-    private OTBTApiAlpha mApi;
-    private Object myServiceConnectedLock = new Object();
 	private boolean mServiceConnected = false;
-    
-    
-    private boolean mServiceInitialised = false;
+	private boolean mServiceInitialised = false;
 	private boolean boomthreading = false;
 	private final Object mResultLock = new Object();
-	private JSONObject mLatestResult = null;
+	private Object myServiceConnectedLock = new Object();
 	
-	
+	// Misc
+	StringBuffer buffer = new StringBuffer();
+    private OTBTApiAlpha mApi;
+    private JSONObject mLatestResult = null;
 	private List<OTBTListenerAlpha> mListeners = new ArrayList<OTBTListenerAlpha>();
-	
 	public static Handler dHandler = new Handler();
+	ExecutorService executorService = Executors.newSingleThreadExecutor();
 	
+	private String mUniqueID = java.util.UUID.randomUUID().toString();
 	
 	protected JSONObject getLatestResult() {
 		synchronized (mResultLock) {
@@ -91,9 +91,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		}
 	}
 	
-	private Handler bHandler = new Handler();
-	
-	ExecutorService executorService = Executors.newSingleThreadExecutor();
 	
 	/*
 	 ************************************************************************************************
@@ -108,9 +105,21 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		return apiEndpoint;
 	}     
 	
+	@Override
+	public boolean onUnbind(Intent intent) {
+		boolean result = false;
+		try {
+			mApi.removeListener(serviceListener);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
 	@Override  
 	public void onCreate() {     
-		super.onCreate();     
+		super.onCreate();
 		Log.i(TAG, "Service creating");
 		if(!mServiceInitialised) {
 			
@@ -123,8 +132,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId){
-		buffer = new StringBuffer();
-		
 		Log.d(TAG, "onStartCommand called("+intent.toString()+", "+flags+", "+startId+") called");
 		args = intent.getStringExtra("args");
 		Log.d(TAG, "args: " + args);
@@ -138,14 +145,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			Log.d(TAG, "oscCalled? "+oscCalled);
 			if(!oscCalled) {
 				oscCalled = true;
-				//handleCommand(intent);
-			    // We want this service to continue running until it is explicitly
+				// We want this service to continue running until it is explicitly
 			    // stopped, so return sticky.
-				Log.d(TAG, "onStartCommand called");
+				Log.d(TAG, "oscCalled -> true");
 				final ActivityManager activityManager = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
 				final List<RunningServiceInfo> services = 
 						activityManager.getRunningServices(Integer.MAX_VALUE);
-				boolean found = false;
+				boolean blueFound = false;
 				for (int i = 0; i < services.size(); i++) {
 					if(D) {
 						Log.d(TAG,"SERVICES_A|Service Nr. " + i + ":" + services.get(i).service);
@@ -153,11 +159,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 						Log.d(TAG,"SERVICES_C|Service Nr. " + i + " class name : " + services.get(i).service.getClassName());
 					}
 					if(services.get(i).service.getClassName().equals("com.opentrons.otbtalpha.cordova.OTBTBlueServiceAlpha")){
-						found = true;
+						blueFound = true;
 						break;
 					}
 				}
-				if(!found){
+				if(!blueFound){
 					Log.d(TAG, "BLUE not found, what gives!?!");
 				}else{
 					if(!mServiceConnected){
@@ -200,7 +206,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 											}
 											
 										}.execute();*/
-										executorService.shutdownNow();
 										//while(!executorService.isTerminated()){
 										//	executorService.awaitTermination(1000,TimeUnit.MILLISECONDS);
 										//	Log.d(TAG, "waiting for termination");
@@ -269,7 +274,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 									}
 									
 								}.execute();*/
-								executorService.shutdownNow();
 								//while(!executorService.isTerminated()){
 								//	executorService.awaitTermination(1000,TimeUnit.MILLISECONDS);
 								//	Log.d(TAG, "waiting for termination");
@@ -317,8 +321,13 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	public void onDestroy() {     
 		super.onDestroy();     
 		Log.i(TAG, "Service destroying");
-		
-		
+		try {
+			mApi.removeListener(serviceListener);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		unbindService(serviceConnectionZ);
 	}
 	
 	
@@ -443,12 +452,11 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		@Override
 		public void kill() throws RemoteException {
 			// TODO Auto-generated method stub
+			Log.d(TAG, "sending !%");
 			mApi.write("!%".getBytes());
 			kill = true;
 			oscCalled = false;
 			mServiceConnected = false;
-			buffer.delete(0, buffer.length());
-			executorService.shutdownNow();
 		}
 
 		@Override
@@ -532,28 +540,19 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   private HashMap<String, Location> hIngredients = new HashMap<String, Location>();
 	   private int pipette;
 	   private int idx = 0;
-	   private double adiff = 0.0;
-	   private double bdiff = 0.0;
-	   private double bopen = 0.0;
-	   private double bclose = 0.0;
 	   private double ablow = 16.0;
 	   private double dtip = 22.0;
 	   
-	   private boolean proceed = true;
 	   private boolean checkGCs = true;
 	   private boolean checkPs = false;
 	   private boolean lockdown = true;
 	   private boolean running = true;
-	   private boolean kill = false;
 	   private boolean endo = false;
 	   
 	   private double posx, posy, posz, bosx=0.0, bosy=0.0, bosz=0.0;
 	   private String gc;
 	   // variables for logging
 	   private int total = 0;
-	   private int current = 0;
-	   private double pct_total = 0.0;
-	   private double pct_current = 0.0;
 	   int rowcount = 0;
 	   
 	   public BoomThread(JSONObject job) {
@@ -602,7 +601,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	   
 	   @Override
 	   public void run() {
-		   int dacount = 0;
 		   Log.d(TAG, "run() called");
 		   //boomerang();
 		   Log.d(TAG, "trying to whack some bytes");
@@ -622,14 +620,9 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   while(running) {
 			   if(buffer.length()>0)
 				   boomerang();
-			   else if(dacount++>10000){
-				   //Log.d(TAG, "dacount: " + dacount);
-				   dacount = 0;
-			   }
 			   if(kill){
 				   Log.d(TAG, "kill -> true");
 				   running = false;
-				   kill = false;
 			   }
 		   }
 		   boomthreading = false;
@@ -640,20 +633,19 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			   		buffer.setLength(0);
 					listener.shutMeDown();
 				} catch (RemoteException e) {
+					try {
+						mApi.removeListener(serviceListener);
+						getApplicationContext().unbindService(serviceConnectionZ);
+					} catch (RemoteException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					Log.d(TAG, "error tryting to send shutMeDown()");
 					e.printStackTrace();
-					running = false;
 				}
 		   }
-		   dHandler.postDelayed(new Runnable(){
-			   public void run(){
-				   executorService.shutdown();
-			   }
-		   }, 200);
-	   }
-	   
-	   private synchronized void setProceed(boolean val){
-		   Log.d(TAG, "setting proceed to: "+String.valueOf(val)+", pee="+pee);
-		   proceed = val;
+		   kill = false;
+		   return;
 	   }
 	   
 	   private void boomerang() {
@@ -695,12 +687,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 	            }
 			   //Log.d(TAG, "status = "+status);
 			   if(status==3){
-				   if(kill){
-					   kill = false;
-					   running = false;
-					   rowcount = 0;
-					   //endSequence();
-				   }
 				   if(!lockdown||checkPs){//||checkGCs){
 					   lockdown = true;
 					   if(whackattack.size()>0) {
@@ -725,8 +711,15 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 								}
 							   checkGCs = true;
 							   Log.d(TAG, "checkGCs! gc=round="+gc);
-							   while(paused){	/* NOOP */	}	
-							   mApi.write(round.getBytes());
+							   while(paused){	/* NOOP */	}
+							   
+							   if(kill){
+								   Log.d(TAG, "running -> false & then return");
+								   running = false;
+								   return;
+							   }else{
+								   mApi.write(round.getBytes());
+							   }
 						   } catch (InterruptedException e) {
 							   // TODO Auto-generated catch block
 							   e.printStackTrace();
@@ -748,6 +741,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 								}
 								rowcount++;
 								commandSetup(jsahn);
+								boomerang();
 							} else {
 								if(!endo) {
 									endSequence();
@@ -1160,26 +1154,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		   kill = false;
 	   }
 	   
-	   private class Delay implements Runnable{
-		   /*int _delay=0;
-		   public Delay(int delay){
-			   _delay = delay;
-			   Log.d(TAG, "_delay = "+_delay);
-		   }*/
-			@Override
-			public void run() {
-				/*try {
-					Thread.sleep(_delay);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}*/
-				Log.d(TAG, "proceed = true, pee="+pee);
-				setProceed(true);
-			}
-		   
-	   }
-	   
    }
    
    
@@ -1209,7 +1183,7 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 		
 		@Override
 		public String getUniqueID() throws RemoteException {
-			return "NOOP";
+			return mUniqueID;
 		}
 		
 		@Override
@@ -1327,7 +1301,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 						}
 						
 					}.execute();*/
-					executorService.shutdownNow();
 					//while(!executorService.isTerminated()){
 					//	executorService.awaitTermination(1000,TimeUnit.MILLISECONDS);
 					//	Log.d(TAG, "waiting for termination");
@@ -1374,8 +1347,6 @@ public class OTBTServiceAlpha extends Service implements IUpdateListener{
 			}
     	}
     }
-	
-	
 	
 }
 
