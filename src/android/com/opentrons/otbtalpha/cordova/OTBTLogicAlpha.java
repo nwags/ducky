@@ -44,6 +44,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	 */
 	public static final String TAG = OTBTLogicAlpha.class.getSimpleName();
 	private static final boolean D = true;
+	
 	// Message types sent from the BluetoothSerialService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
@@ -62,11 +63,6 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public static double posz=0.0;
 	public static double posa=0.0;
 	public static final double rosa=0.3183099;
-	public static int abc = 0;
-	public static double a_diff=0.0;
-	public static double b_diff=0.0;
-	public static double c_diff=0.0;
-	
 	
 	public static double xmax=400.0;
 	public static double ymax=200.0;
@@ -74,6 +70,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	public static double amax=24.0;
 	public static boolean power=true;
 	public static String macAddress;
+	public static boolean isBooming=false;
 	/*
 	 ************************************************************************************************
 	 * Keys 
@@ -637,17 +634,7 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			Log.d(TAG, "t_posa = "+String.valueOf(t_posa));
 			posa = (2.0*Math.PI*t_posa*rosa)/360.0;
 			Log.d(TAG, "posa = "+String.valueOf(posa));
-			if(abc==0){
-				jResult.put("a", posa-a_diff);
-			}else if(abc==1){
-				jResult.put("b", posa-b_diff);
-			}else if(abc==2){
-				jResult.put("c", posa-c_diff);
-			}
 			jResult.put("a", posa);
-			Log.d(TAG, "pos a_diff="+String.valueOf(a_diff));
-			Log.d(TAG, "pos b_diff="+String.valueOf(b_diff));
-			Log.d(TAG, "pos c_diff="+String.valueOf(c_diff));
     	}
     	if (sr.has("stat")){
 			switch (sr.getInt("stat")){
@@ -824,47 +811,13 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	    		gocode+=gogoStr;
 	    	}
 	    	if(json.has("a")) {
-	    		abc=0;
 	    		blueService.write("{\"gc\":\"M5\"}\n".getBytes());
-	    		double goa = json.getDouble("a");//*amax;
-	    		/*if(testee){
-	    			testee=false;
-	    			goa=0.0;
-	    		}else{
-	    			testee=true;
-	    			goa=10.0;
-	    		}*/
-	    		goa-=a_diff;
-	    		b_diff+=(goa-b_diff);
-	    		c_diff+=(goa-c_diff);
+	    		double goa = json.getDouble("a");
 	    		gogoStr = "a"+String.valueOf(goa);
-	    		gocode+=gogoStr;
-	    	}else if(json.has("b")){
-	    		abc=1;
-	    		blueService.write("{\"gc\":\"M3\"}\n".getBytes());
-	    		double gob = json.getDouble("b");
-	    		gob-=b_diff;
-	    		a_diff+=(gob-a_diff);
-	    		a_diff=0.0;
-	    		c_diff+=(gob-c_diff);
-	    		gogoStr = "a"+String.valueOf(gob);
-	    		gocode+=gogoStr;
-	    	}else if(json.has("c")){
-	    		abc=2;
-	    		blueService.write("{\"gc\":\"M4\"}\n".getBytes());
-	    		double goc = json.getDouble("c");
-	    		goc-=c_diff;
-	    		a_diff+=(goc-a_diff);
-	    		a_diff=0.0;
-	    		b_diff+=(goc-b_diff);
-	    		gogoStr = "a"+String.valueOf(goc);
 	    		gocode+=gogoStr;
 	    	}
 	    	gocode+="\"}\n";
 	    	Log.d(TAG, "gcode = "+gocode);
-	    	Log.d(TAG, "a_diff = "+String.valueOf(a_diff));
-	    	Log.d(TAG, "b_diff = "+String.valueOf(b_diff));
-	    	Log.d(TAG, "c_diff = "+String.valueOf(c_diff));
 	    	blueService.write(gocode.getBytes());
 	        ((CallbackContext)listenerExtras[0]).success();
 			
@@ -951,12 +904,19 @@ public class OTBTLogicAlpha implements IUpdateListener{
 	
 	public ExecuteResult run(CordovaArgs args, IUpdateListener listener, Object[] listenerExtras){
 		ExecuteResult result = null;
-		
+		if(isBooming){
+			Log.d(TAG, "already booming");
+			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "already booming"));
+			return result;
+		}
 		if(args==null){
-			Log.d(TAG, "run failed");
+			Log.d(TAG, "run failed, args null");
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, "null arg"));
+			return result;
 		}
 		try{
+			isBooming = true;
+			Log.d(TAG, "isBooming -> true");
 			String serviceName = OTBTServiceAlpha.class.getName();//"BOOM";
 			
 			Log.d(TAG, "Finding servicename " + serviceName);
@@ -980,6 +940,8 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			result = new ExecuteResult(ExecuteStatus.OK, createJSONResult(true, ERROR_NONE_CODE, ERROR_NONE_MSG));
 			
 		}catch(Exception ex){
+			Log.d(TAG, "isBooming -> false");
+			isBooming = false;
 			Log.d(TAG, "run failed", ex);
 			result = new ExecuteResult(ExecuteStatus.ERROR, createJSONResult(false, ERROR_EXCEPTION_CODE, ex.getMessage()));
 		}
@@ -1507,9 +1469,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 		public ExecuteResult stopService()
 		{
 			ExecuteResult result = null;
-			Log.d("ServiceDetails", "stopService called");
+			Log.d(LOCALTAG, "stopService called");
 			this.currentlyBooming = false;
-			Log.d(TAG, "currentlyBooming set to false");
+			Log.d(LOCALTAG, "currentlyBooming -> false");
+			isBooming = false;
+			Log.d(LOCALTAG, "isBooming -> false");
 			try {
 				
 				Log.d("ServiceDetails", "Unbinding Service");
@@ -1696,6 +1660,11 @@ public class OTBTLogicAlpha implements IUpdateListener{
 			
 			return result;
 		}
+		
+		
+		
+		
+		
 		
 		/*
 		 * Background Service specific methods
@@ -1904,10 +1873,9 @@ public class OTBTLogicAlpha implements IUpdateListener{
 
 			@Override
 			public void shutMeDown() throws RemoteException {
-				// TODO Auto-generated method stub
 				Log.d(TAG, "shutMeDown() called");
-				currentlyBooming = false;
-				//stopService();
+				//currentlyBooming = false;
+				stopService();
 			}
 			
 		};
